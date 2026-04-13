@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 500">
+  <defs>
+    <linearGradient id="bgGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#0f172a"/>
+    </linearGradient>
+  </defs>
+  
+  <rect width="900" height="500" fill="url(#bgGrad2)"/>
+  
+  <!-- Title -->
+  <text x="450" y="30" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="18" font-weight="bold">Memory Linking Process: Establishing Spatiotemporal Connections</text>
+  
+  <!-- Time axis -->
+  <line x1="100" y1="380" x2="800" y2="380" stroke="#475569" stroke-width="2"/>
+  <text x="100" y="400" fill="#94a3b8" font-family="Arial, sans-serif" font-size="10">T₀</text>
+  <text x="300" y="400" fill="#94a3b8" font-family="Arial, sans-serif" font-size="10">T₁</text>
+  <text x="500" y="400" fill="#94a3b8" font-family="Arial, sans-serif" font-size="10">T₂</text>
+  <text x="700" y="400" fill="#94a3b8" font-family="Arial, sans-serif" font-size="10">Tₙ</text>
+  <text x="450" y="420" text-anchor="middle" fill="#64748b" font-family="Arial, sans-serif" font-size="11">Time Axis</text>
+  
+  <!-- Memory Nodes -->
+  <!-- Memory M1 -->
+  <rect x="80" y="100" width="120" height="80" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="2"/>
+  <text x="140" y="120" text-anchor="middle" fill="#3b82f6" font-family="Arial, sans-serif" font-size="11" font-weight="bold">Memory M₁</text>
+  <text x="140" y="140" text-anchor="middle" fill="#94a3b8" font-family="Arial, sans-serif" font-size="9">Session: sess_001</text>
+  <text x="140" y="155" text-anchor="middle" fill="#64748b" font-family="Arial, sans-serif" font-size="8">Device: dev_A</text>
+  <text x="140" y="170" text-anchor="middle" fill="#10b981" font-family="Arial, sans-serif" font-size="9">Importance: 0.9</text>
+  
+  <!-- Memory M2 -->
+  <rect x="280" y="180" width="120" height="80" rx="8" fill="#1e293b" stroke="#8b5cf6" stroke-width="2"/>
+  <text x="340" y="200" text-anchor="middle" fill="#8b5cf6" font-family="Arial, sans-serif" font-size="11" font-weight="bold">Memory M₂</text>
+  <text x="340" y="220" text-anchor="middle" fill="#94a3b8" font-family="Arial, sans-serif" font-size="9">Session: sess_002</text>
+  <text x="340" y="235" text-anchor="middle" fill="#64748b" font-family="Arial, sans-serif" font-size="8">Device: dev_A</text>
+  <text x="340" y="250" text-anchor="middle" fill="#10b981" font-family="Arial, sans-serif" font-size="9">Importance: 0.7</text>
+  
+  <!-- Memory M3 -->
+  <rect x="480" y="120" width="120" height="80" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/>
+  <text x="540" y="140" text-anchor="middle" fill="#f59e0b" font-family="Arial, sans-serif" font-size="11" font-weight="bold">Memory M₃</text>
+  <text x="540" y="160" text-anchor="middle" fill="#94a3b8" font-family="Arial, sans-serif" font-size="9">Session: sess_001</text>
+  <text x="540" y="175" text-anchor="middle" fill="#64748b" font-family="Arial, sans-serif" font-size="8">Device: dev_B</text>
+  <text x="540" y="190" text-anchor="middle" fill="#10b981" font-family="Arial, sans-serif" font-size="9">Importance: 0.85</text>
+  
+  <!-- Memory M4 -->
+  <rect x="680" y="220" width="120" height="80" rx="8" fill="#1e293b" stroke="#ec4899" stroke-width="2"/>
+  <text x="740" y="240" text-anchor="middle" fill="#ec4899" font-family="Arial, sans-serif" font-size="11" font-weight="bold">Memory M₄</text>
+  <text x="740" y="260" text-anchor="middle" fill="#94a3b8" font-family="Arial, sans-serif" font-size="9">Session: sess_003</text>
+  <text x="740" y="275" text-anchor="middle" fill="#64748b" font-family="Arial, sans-serif" font-size="8">Device: dev_A</text>
+  <text x="740" y="290" text-anchor="middle" fill="#10b981" font-family="Arial, sans-serif" font-size="9">Importance: 0.6</text>
+  
+  <!-- Temporal Links -->
+  <path d="M200 140 Q240 160 280 200" stroke="#3b82f6" stroke-width="2" fill="none" stroke-dasharray="5,3"/>
+  <path d="M400 180 Q440 150 480 150" stroke="#3b82f6" stroke-width="2" fill="none" stroke-dasharray="5,3"/>
+  <path d="M600 160 Q640 190 680 240" stroke="#8b5cf6" stroke-width="2" fill="none" stroke-dasharray="5,3"/>
+  
+  <!-- Spatial Links (same device) -->
+  <path d="M200 140 Q300 80 400 140" stroke="#8b5cf6" stroke-width="3" fill="none"/>
+  <path d="M400 160 Q540 80 600 140" stroke="#8b5cf6" stroke-width="3" fill="none"/>
+  <path d="M400 180 Q560 200 680 240" stroke="#8b5cf6" stroke-width="3" fill="none"/>
+  
+  <!-- Semantic Links -->
+  <path d="M200 170 Q340 100 480 170" stroke="#f59e0b" stroke-width="2" fill="none" stroke-dasharray="3,3"/>
+  <path d="M340 250 Q510 300 680 280" stroke="#f59e0b" stroke-width="2" fill="none" stroke-dasharray="3,3"/>
+  
+  <!-- Legend -->
+  <rect x="50" y="440" width="300" height="50" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+  <text x="70" y="460" fill="#ffffff" font-family="Arial, sans-serif" font-size="10" font-weight="bold">Link Types:</text>
+  <line x1="70" y1="475" x2="100" y2="475" stroke="#3b82f6" stroke-width="3" stroke-dasharray="5,3"/>
+  <text x="110" y="479" fill="#94a3b8" font-family="Arial, sans-serif" font-size="9">Temporal</text>
+  <line x1="170" y1="475" x2="200" y2="475" stroke="#8b5cf6" stroke-width="3"/>
+  <text x="210" y="479" fill="#94a3b8" font-family="Arial, sans-serif" font-size="9">Spatial (same device)</text>
+  <line x1="290" y1="475" x2="320" y2="475" stroke="#f59e0b" stroke-width="2" stroke-dasharray="3,3"/>
+  <text x="330" y="479" fill="#94a3b8" font-family="Arial, sans-serif" font-size="9">Semantic</text>
+  
+  <!-- Link Strength indicator -->
+  <rect x="400" y="440" width="450" height="50" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+  <text x="420" y="460" fill="#ffffff" font-family="Arial, sans-serif" font-size="10" font-weight="bold">Linking Rules:</text>
+  <text x="420" y="480" fill="#64748b" font-family="Arial, sans-serif" font-size="9">• Temporal: |t₁-t₂| ≤ 1 hour, same session</text>
+  <text x="580" y="480" fill="#64748b" font-family="Arial, sans-serif" font-size="9">• Spatial: same device_id</text>
+  <text x="720" y="480" fill="#64748b" font-family="Arial, sans-serif" font-size="9">• Semantic: cos_sim > 0.5</text>
+</svg>

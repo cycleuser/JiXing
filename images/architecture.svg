@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#16213e"/>
+    </linearGradient>
+    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#00d9ff"/>
+      <stop offset="100%" style="stop-color:#0099cc"/>
+    </linearGradient>
+    <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#a855f7"/>
+      <stop offset="100%" style="stop-color:#7c3aed"/>
+    </linearGradient>
+    <linearGradient id="greenGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#10b981"/>
+      <stop offset="100%" style="stop-color:#059669"/>
+    </linearGradient>
+    <linearGradient id="orangeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#f59e0b"/>
+      <stop offset="100%" style="stop-color:#d97706"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="2" stdDeviation="3" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  
+  <rect width="800" height="600" fill="url(#bgGrad)"/>
+  
+  <!-- Title -->
+  <text x="400" y="35" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="20" font-weight="bold">JiXing: Long-Term Memory System Architecture</text>
+  
+  <!-- Input Layer -->
+  <rect x="50" y="70" width="180" height="80" rx="8" fill="#1e293b" stroke="#00d9ff" stroke-width="2" filter="url(#shadow)"/>
+  <text x="140" y="95" text-anchor="middle" fill="#00d9ff" font-family="Arial, sans-serif" font-size="12" font-weight="bold">User Input</text>
+  <text x="140" y="115" text-anchor="middle" fill="#94a3b8" font-family="Arial, sans-serif" font-size="10">(Prompt + Context)</text>
+  <text x="140" y="135" text-anchor="middle" fill="#64748b" font-family="Arial, sans-serif" font-size="9">jixing ollama run gemma3:1b</text>
+  
+  <!-- Spatiotemporal Indexer -->
+  <rect x="280" y="70" width="200" height="80" rx="8" fill="#1e293b" stroke="#a855f7" stroke-width="2" filter="url(#shadow)"/>
+  <text x="380" y="95" text-anchor="middle" fill="#a855f7" font-family="Arial, sans-serif" font-size="12" font-weight="bold">Spatiotemporal Indexer</text>
+  <text x="380" y="115" text-anchor="middle" fill="#94a3b8" font-family="Arial, sans-serif" font-size="10">Time + Location + Device</text>
+  <text x="380" y="135" text-anchor="middle" fill="#64748b" font-family="Arial, sans-serif" font-size="9">Hash + Embedding</text>
+  
+  <!-- Memory Store -->
+  <rect x="530" y="70" width="220" height="80" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2" filter="url(#shadow)"/>
+  <text x="640" y="95" text-anchor="middle" fill="#10b981" font-family="Arial, sans-serif" font-size="12" font-weight="bold">Memory Store</text>
+  <text x="640" y="115" text-anchor="middle" fill="#94a3b8" font-family="Arial, sans-serif" font-size="10">SQLite + Vector Index</text>
+  <text x="640" y="135" text-anchor="middle" fill="#64748b" font-family="Arial, sans-serif" font-size="9">Linked Memories</text>
+  
+  <!-- Arrows from Input -->
+  <path d="M230 110 L270 110" stroke="#00d9ff" stroke-width="2" fill="none" marker-end="url(#arrowBlue)"/>
+  <path d="M230 110 L520 110" stroke="#a855f7" stroke-width="2" stroke-dasharray="5,5" fill="none"/>
+  
+  <!-- Linker Module -->
+  <rect x="280" y="200" width="200" height="100" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="2" filter="url(#shadow)"/>
+  <text x="380" y="225" text-anchor="middle" fill="#f59e0b" font-family="Arial, sans-serif" font-size="12" font-weight="bold">Memory Linker</text>
+  <text x="380" y="245" text-anchor="middle" fill="#94a3b8" font-family="Arial, sans-serif" font-size="10">Temporal | Spatial | Semantic</text>
+  <rect x="300" y="255" width="70" height="20" rx="4" fill="#3b82f6"/>
+  <text x="335" y="269" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="9">T-Link</text>
+  <rect x="380" y="255" width="70" height="20" rx="4" fill="#8b5cf6"/>
+  <text x="415" y="269" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="9">S-Link</text>
+  
+  <!-- Compressor -->
+  <rect x="280" y="340" width="200" height="70" rx="8" fill="#1e293b" stroke="#ec4899" stroke-width="2" filter="url(#shadow)"/>
+  <text x="380" y="365" text-anchor="middle" fill="#ec4899" font-family="Arial, sans-serif" font-size="12" font-weight="bold">Semantic Compressor</text>
+  <text x="380" y="390" text-anchor="middle" fill="#64748b" font-family="Arial, sans-serif" font-size="10">Importance-Based Compression</text>
+  
+  <!-- Retrieval -->
+  <rect x="280" y="450" width="200" height="70" rx="8" fill="#1e293b" stroke="#06b6d4" stroke-width="2" filter="url(#shadow)"/>
+  <text x="380" y="475" text-anchor="middle" fill="#06b6d4" font-family="Arial, sans-serif" font-size="12" font-weight="bold">Retrieval Engine</text>
+  <text x="380" y="500" text-anchor="middle" fill="#64748b" font-family="Arial, sans-serif" font-size="10">Hybrid Search + Ranking</text>
+  
+  <!-- Model Runner -->
+  <rect x="530" y="280" width="220" height="120" rx="8" fill="#1e293b" stroke="#00d9ff" stroke-width="2" filter="url(#shadow)"/>
+  <text x="640" y="305" text-anchor="middle" fill="#00d9ff" font-family="Arial, sans-serif" font-size="12" font-weight="bold">Local LLM Runner</text>
+  <text x="640" y="325" text-anchor="middle" fill="#94a3b8" font-family="Arial, sans-serif" font-size="10">Ollama / Moxing Adapter</text>
+  <rect x="555" y="335" width="75" height="25" rx="4" fill="#0891b2"/>
+  <text x="592" y="352" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="10">OLLAMA</text>
+  <rect x="640" y="335" width="75" height="25" rx="4" fill="#7c3aed"/>
+  <text x="677" y="352" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="10">MOXING</text>
+  <text x="640" y="380" text-anchor="middle" fill="#64748b" font-family="Arial, sans-serif" font-size="9">gemma3:1b, llama2, etc.</text>
+  
+  <!-- Output -->
+  <rect x="530" y="450" width="220" height="70" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2" filter="url(#shadow)"/>
+  <text x="640" y="480" text-anchor="middle" fill="#10b981" font-family="Arial, sans-serif" font-size="12" font-weight="bold">Response + Metrics</text>
+  <text x="640" y="500" text-anchor="middle" fill="#64748b" font-family="Arial, sans-serif" font-size="10">Token count, Latency, Memory usage</text>
+  
+  <!-- Connection Lines -->
+  <path d="M480 110 L520 110" stroke="#10b981" stroke-width="2" fill="none"/>
+  <path d="M380 150 L380 200" stroke="#f59e0b" stroke-width="2" fill="none"/>
+  <path d="M380 300 L380 340" stroke="#ec4899" stroke-width="2" fill="none"/>
+  <path d="M380 410 L380 450" stroke="#06b6d4" stroke-width="2" fill="none"/>
+  <path d="M480 485 L520 340" stroke="#00d9ff" stroke-width="2" stroke-dasharray="5,5" fill="none"/>
+  <path d="M480 485 L530 485" stroke="#10b981" stroke-width="2" fill="none"/>
+  
+  <!-- Link types legend -->
+  <rect x="50" y="200" width="150" height="120" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1"/>
+  <text x="125" y="220" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="11" font-weight="bold">Memory Links</text>
+  <line x1="65" y1="240" x2="95" y2="240" stroke="#3b82f6" stroke-width="3"/>
+  <text x="105" y="244" fill="#94a3b8" font-family="Arial, sans-serif" font-size="10">Temporal</text>
+  <line x1="65" y1="265" x2="95" y2="265" stroke="#8b5cf6" stroke-width="3"/>
+  <text x="105" y="269" fill="#94a3b8" font-family="Arial, sans-serif" font-size="10">Spatial</text>
+  <line x1="65" y1="290" x2="95" y2="290" stroke="#f59e0b" stroke-width="3"/>
+  <text x="105" y="294" fill="#94a3b8" font-family="Arial, sans-serif" font-size="10">Semantic</text>
+  
+  <!-- Arrow marker definition -->
+  <defs>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#00d9ff"/>
+    </marker>
+  </defs>
+  
+  <!-- Footer -->
+  <text x="400" y="580" text-anchor="middle" fill="#64748b" font-family="Arial, sans-serif" font-size="10">Local AI Model Assistant with Spatiotemporal Long-Term Memory</text>
+</svg>
