@@ -1,6 +1,9 @@
-import requests
+import json
+import time
+import threading
 
-from flask import Flask, jsonify, render_template, request
+import requests
+from flask import Flask, Response, jsonify, render_template, request, stream_with_context
 
 from .api import (
     delete_session,
@@ -9,9 +12,9 @@ from .api import (
     merge_sessions,
     query_sessions,
     run_moxing,
-    run_ollama,
     search_messages,
 )
+from .core import SessionManager, ModelRunner, SystemInfo
 
 
 def create_app() -> Flask:
@@ -118,6 +121,71 @@ def create_app() -> Flask:
         result = run_ollama(model=model, prompt=prompt, session_id=session_id)
         return jsonify(result.to_dict())
 
+    @app.route("/api/ollama/stream", methods=["POST"])
+    def api_ollama_stream():
+        data = request.get_json()
+        if not data:
+            return jsonify({"success": False, "error": "JSON body required"}), 400
+        model = data.get("model")
+        prompt = data.get("prompt")
+        session_id = data.get("session_id")
+        if not model or not prompt:
+            return jsonify({"success": False, "error": "model and prompt required"}), 400
+
+        manager = SessionManager.get_instance()
+        session = None
+        if session_id:
+            session = manager.get_session(session_id)
+        if session is None:
+            session = manager.create_session(
+                model_provider="ollama",
+                model_name=model,
+                system_info=SystemInfo.collect().to_dict(),
+            )
+
+        session.add_message("user", prompt)
+
+        def generate():
+            full_response = ""
+            metrics = {}
+            start_time = time.time()
+            url = "http://localhost:11434/api/generate"
+            payload = {"model": model, "prompt": prompt, "stream": True}
+
+            try:
+                resp = requests.post(url, json=payload, stream=True, timeout=300)
+                for line in resp.iter_lines():
+                    if line:
+                        chunk = json.loads(line.decode("utf-8"))
+                        token = chunk.get("response", "")
+                        full_response += token
+                        if "done" in chunk and chunk["done"]:
+                            metrics = {
+                                "eval_count": chunk.get("eval_count", 0),
+                                "eval_duration": chunk.get("eval_duration", 0),
+                                "total_duration": chunk.get("total_duration", 0),
+                                "wall_time_ms": int((time.time() - start_time) * 1000),
+                            }
+                        yield f"data: {json.dumps({'token': token, 'done': chunk.get('done', False)})}\n\n"
+            except Exception as e:
+                yield f"data: {json.dumps({'error': str(e), 'done': True})}\n\n"
+                return
+
+            session.add_message("assistant", full_response, metrics=metrics)
+            manager._save_session(session)
+
+            from .db import Database
+
+            try:
+                db = Database()
+                db.save_session(session)
+            except Exception:
+                pass
+
+            yield f"data: {json.dumps({'done': True, 'session_id': session.id, 'metrics': metrics})}\n\n"
+
+        return Response(stream_with_context(generate()), mimetype="text/event-stream")
+
     @app.route("/api/moxing/run", methods=["POST"])
     def api_moxing_run():
         data = request.get_json()
@@ -141,8 +209,6 @@ def create_template_files():
     templates_dir.mkdir(exist_ok=True)
     static_dir = Path(__file__).parent / "static"
     static_dir.mkdir(exist_ok=True)
-    # Template is now maintained in templates/index.html
-    pass
 
 
 if __name__ == "__main__":
