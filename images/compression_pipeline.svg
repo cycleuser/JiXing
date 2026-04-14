@@ -1,96 +1,88 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 950 450">
   <defs>
-    <linearGradient id="bgGrad3" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#1a1a2e"/>
-      <stop offset="100%" style="stop-color:#0f172a"/>
-    </linearGradient>
-    <linearGradient id="highGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#10b981"/>
-      <stop offset="100%" style="stop-color:#059669"/>
-    </linearGradient>
-    <linearGradient id="medGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#f59e0b"/>
-      <stop offset="100%" style="stop-color:#d97706"/>
-    </linearGradient>
-    <linearGradient id="lowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#ef4444"/>
-      <stop offset="100%" style="stop-color:#dc2626"/>
-    </linearGradient>
-  </defs>
-  
-  <rect width="900" height="400" fill="url(#bgGrad3)"/>
-  
-  <!-- Title -->
-  <text x="450" y="30" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="18" font-weight="bold">Importance Scoring and Memory Compression Pipeline</text>
-  
-  <!-- Input Memory -->
-  <rect x="50" y="70" width="180" height="120" rx="8" fill="#1e293b" stroke="#00d9ff" stroke-width="2"/>
-  <text x="140" y="90" text-anchor="middle" fill="#00d9ff" font-family="Arial, sans-serif" font-size="12" font-weight="bold">Raw Memory</text>
-  <text x="140" y="110" text-anchor="middle" fill="#94a3b8" font-family="Arial, sans-serif" font-size="10">Content: 2000 chars</text>
-  <text x="140" y="130" text-anchor="middle" fill="#94a3b8" font-family="Arial, sans-serif" font-size="10">Access: 15 times</text>
-  <text x="140" y="150" text-anchor="middle" fill="#94a3b8" font-family="Arial, sans-serif" font-size="10">Age: 30 days</text>
-  <text x="140" y="175" text-anchor="middle" fill="#64748b" font-family="Arial, sans-serif" font-size="9">Has: code, math symbols</text>
-  
-  <!-- Importance Calculator -->
-  <rect x="280" y="70" width="160" height="120" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="2"/>
-  <text x="360" y="90" text-anchor="middle" fill="#f59e0b" font-family="Arial, sans-serif" font-size="12" font-weight="bold">Importance</text>
-  <text x="360" y="110" text-anchor="middle" fill="#f59e0b" font-family="Arial, sans-serif" font-size="12" font-weight="bold">Calculator</text>
-  <text x="360" y="135" text-anchor="middle" fill="#94a3b8" font-family="Arial, sans-serif" font-size="9">Base: 1.0</text>
-  <text x="360" y="150" text-anchor="middle" fill="#94a3b8" font-family="Arial, sans-serif" font-size="9">+Code: ×1.2</text>
-  <text x="360" y="165" text-anchor="middle" fill="#94a3b8" font-family="Arial, sans-serif" font-size="9">+Length: ×1.1</text>
-  <text x="360" y="180" text-anchor="middle" fill="#94a3b8" font-family="Arial, sans-serif" font-size="9">+Access: ×1.05</text>
-  
-  <!-- Arrow -->
-  <path d="M230 130 L270 130" stroke="#ffffff" stroke-width="2" fill="none" marker-end="url(#arrowWhite)"/>
-  
-  <!-- Importance Score Output -->
-  <rect x="280" y="220" width="160" height="60" rx="8" fill="#10b981" stroke="#10b981" stroke-width="2"/>
-  <text x="360" y="245" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="14" font-weight="bold">Score: 1.65</text>
-  <text x="360" y="265" text-anchor="middle" fill="#d1fae5" font-family="Arial, sans-serif" font-size="10">HIGH Priority</text>
-  
-  <!-- Compression Decision -->
-  <rect x="480" y="70" width="160" height="120" rx="8" fill="#1e293b" stroke="#a855f7" stroke-width="2"/>
-  <text x="560" y="90" text-anchor="middle" fill="#a855f7" font-family="Arial, sans-serif" font-size="12" font-weight="bold">Compression</text>
-  <text x="560" y="110" text-anchor="middle" fill="#a855f7" font-family="Arial, sans-serif" font-size="12" font-weight="bold">Decision</text>
-  <text x="560" y="135" text-anchor="middle" fill="#94a3b8" font-family="Arial, sans-serif" font-size="9">Threshold: 500 chars</text>
-  <text x="560" y="155" text-anchor="middle" fill="#94a3b8" font-family="Arial, sans-serif" font-size="9">2000 > 500</text>
-  <text x="560" y="175" text-anchor="middle" fill="#ef4444" font-family="Arial, sans-serif" font-size="10" font-weight="bold">COMPRESS</text>
-  
-  <!-- Arrow to compression -->
-  <path d="M440 130 L470 130" stroke="#a855f7" stroke-width="2" fill="none"/>
-  
-  <!-- Compression Process -->
-  <rect x="680" y="70" width="180" height="120" rx="8" fill="#1e293b" stroke="#ec4899" stroke-width="2"/>
-  <text x="770" y="90" text-anchor="middle" fill="#ec4899" font-family="Arial, sans-serif" font-size="12" font-weight="bold">Compression</text>
-  <text x="770" y="110" text-anchor="middle" fill="#94a3b8" font-family="Arial, sans-serif" font-size="10">Original: 2000 chars</text>
-  <text x="770" y="130" text-anchor="middle" fill="#94a3b8" font-family="Arial, sans-serif" font-size="10">Summary: 500 chars</text>
-  <text x="770" y="150" text-anchor="middle" fill="#94a3b8" font-family="Arial, sans-serif" font-size="10">Ratio: 4:1</text>
-  <text x="770" y="175" text-anchor="middle" fill="#10b981" font-family="Arial, sans-serif" font-size="10">Level +1, Score ×0.9</text>
-  
-  <!-- Final Output -->
-  <rect x="480" y="220" width="380" height="140" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2"/>
-  <text x="670" y="245" text-anchor="middle" fill="#10b981" font-family="Arial, sans-serif" font-size="12" font-weight="bold">Compressed Memory Stored</text>
-  
-  <rect x="500" y="255" width="160" height="30" rx="4" fill="#10b981"/>
-  <text x="580" y="275" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="10">Importance: 1.48</text>
-  
-  <rect x="680" y="255" width="160" height="30" rx="4" fill="#a855f7"/>
-  <text x="760" y="275" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="10">Compression: L2</text>
-  
-  <rect x="500" y="295" width="340" height="50" rx="4" fill="#0f172a" stroke="#475569"/>
-  <text x="520" y="315" fill="#94a3b8" font-family="Arial, sans-serif" font-size="9">Original preserved in metadata</text>
-  <text x="520" y="333" fill="#94a3b8" font-family="Arial, sans-serif" font-size="9">Links: 5 temporal, 3 spatial, 2 semantic</text>
-  
-  <!-- Formula Box -->
-  <rect x="50" y="310" width="380" height="70" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1"/>
-  <text x="70" y="335" fill="#ffffff" font-family="Arial, sans-serif" font-size="11" font-weight="bold">Importance Formula:</text>
-  <text x="70" y="355" fill="#94a3b8" font-family="Arial, sans-serif" font-size="10">I = Base × (0.4 + 0.3×L + 0.2×R + 0.1×A)</text>
-  <text x="300" y="355" fill="#64748b" font-family="Arial, sans-serif" font-size="9">L=length, R=recency, A=access</text>
-  
-  <!-- Arrow definitions -->
-  <defs>
-    <marker id="arrowWhite" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#ffffff"/>
+    <marker id="arrowDark" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#374151"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#008B6C"/>
     </marker>
   </defs>
+
+  <!-- White background -->
+  <rect width="950" height="450" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="475" y="38" text-anchor="middle" fill="#1a1a1a" font-family="Arial, sans-serif" font-size="22" font-weight="bold">Figure 4: Importance Scoring and Memory Compression Pipeline</text>
+
+  <!-- Input Memory - Klein Blue tint -->
+  <rect x="40" y="80" width="200" height="140" rx="8" fill="#e8edf5" stroke="#002FA7" stroke-width="2"/>
+  <text x="140" y="110" text-anchor="middle" fill="#002FA7" font-family="Arial, sans-serif" font-size="16" font-weight="bold">Raw Memory</text>
+  <text x="140" y="138" text-anchor="middle" fill="#374151" font-family="Arial, sans-serif" font-size="14">Content: 2000 chars</text>
+  <text x="140" y="162" text-anchor="middle" fill="#374151" font-family="Arial, sans-serif" font-size="14">Access: 15 times</text>
+  <text x="140" y="186" text-anchor="middle" fill="#374151" font-family="Arial, sans-serif" font-size="14">Age: 30 days</text>
+  <text x="140" y="210" text-anchor="middle" fill="#4F3A2B" font-family="Arial, sans-serif" font-size="13" font-style="italic">Has: code, math symbols</text>
+
+  <!-- Arrow -->
+  <path d="M240 150 L270 150" stroke="#374151" stroke-width="2" fill="none" marker-end="url(#arrowDark)"/>
+
+  <!-- Importance Calculator - Van Dyke Brown tint -->
+  <rect x="270" y="80" width="180" height="140" rx="8" fill="#f0ede9" stroke="#4F3A2B" stroke-width="2"/>
+  <text x="360" y="110" text-anchor="middle" fill="#4F3A2B" font-family="Arial, sans-serif" font-size="16" font-weight="bold">Importance</text>
+  <text x="360" y="134" text-anchor="middle" fill="#4F3A2B" font-family="Arial, sans-serif" font-size="16" font-weight="bold">Calculator</text>
+  <text x="360" y="162" text-anchor="middle" fill="#374151" font-family="Arial, sans-serif" font-size="13">Base: 1.0</text>
+  <text x="360" y="184" text-anchor="middle" fill="#374151" font-family="Arial, sans-serif" font-size="13">+Code: x1.2</text>
+  <text x="360" y="206" text-anchor="middle" fill="#374151" font-family="Arial, sans-serif" font-size="13">+Length: x1.1</text>
+
+  <!-- Arrow -->
+  <path d="M450 150 L470 150" stroke="#374151" stroke-width="2" fill="none" marker-end="url(#arrowDark)"/>
+
+  <!-- Compression Decision - Burgundy Red tint -->
+  <rect x="470" y="80" width="180" height="140" rx="8" fill="#f5e8eb" stroke="#800020" stroke-width="2"/>
+  <text x="560" y="110" text-anchor="middle" fill="#800020" font-family="Arial, sans-serif" font-size="16" font-weight="bold">Compression</text>
+  <text x="560" y="134" text-anchor="middle" fill="#800020" font-family="Arial, sans-serif" font-size="16" font-weight="bold">Decision</text>
+  <text x="560" y="162" text-anchor="middle" fill="#374151" font-family="Arial, sans-serif" font-size="13">Threshold: 500 chars</text>
+  <text x="560" y="186" text-anchor="middle" fill="#374151" font-family="Arial, sans-serif" font-size="13">2000 &gt; 500</text>
+  <text x="560" y="210" text-anchor="middle" fill="#800020" font-family="Arial, sans-serif" font-size="15" font-weight="bold">COMPRESS</text>
+
+  <!-- Arrow -->
+  <path d="M650 150 L670 150" stroke="#374151" stroke-width="2" fill="none" marker-end="url(#arrowDark)"/>
+
+  <!-- Compression Process - Mars Green tint -->
+  <rect x="670" y="80" width="240" height="140" rx="8" fill="#e8f0ed" stroke="#008B6C" stroke-width="2"/>
+  <text x="790" y="110" text-anchor="middle" fill="#008B6C" font-family="Arial, sans-serif" font-size="16" font-weight="bold">Compression Process</text>
+  <text x="790" y="138" text-anchor="middle" fill="#374151" font-family="Arial, sans-serif" font-size="14">Original: 2000 chars</text>
+  <text x="790" y="162" text-anchor="middle" fill="#374151" font-family="Arial, sans-serif" font-size="14">Summary: 500 chars</text>
+  <text x="790" y="186" text-anchor="middle" fill="#374151" font-family="Arial, sans-serif" font-size="14">Ratio: 4:1</text>
+  <text x="790" y="210" text-anchor="middle" fill="#008B6C" font-family="Arial, sans-serif" font-size="14" font-weight="bold">Level +1, Score x0.9</text>
+
+  <!-- Importance Score Output - Mars Green -->
+  <rect x="270" y="260" width="180" height="70" rx="8" fill="#008B6C" stroke="#008B6C" stroke-width="2"/>
+  <text x="360" y="290" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="18" font-weight="bold">Score: 1.65</text>
+  <text x="360" y="315" text-anchor="middle" fill="#e8f0ed" font-family="Arial, sans-serif" font-size="14" font-weight="bold">HIGH Priority</text>
+
+  <!-- Arrow from Calculator to Score -->
+  <path d="M360 220 L360 260" stroke="#008B6C" stroke-width="2" fill="none" marker-end="url(#arrowGreen)"/>
+
+  <!-- Final Output - Mars Green tint -->
+  <rect x="470" y="260" width="440" height="160" rx="10" fill="#e8f0ed" stroke="#008B6C" stroke-width="2"/>
+  <text x="690" y="290" text-anchor="middle" fill="#008B6C" font-family="Arial, sans-serif" font-size="16" font-weight="bold">Compressed Memory Stored</text>
+
+  <rect x="495" y="305" width="180" height="35" rx="5" fill="#008B6C"/>
+  <text x="585" y="328" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="14" font-weight="bold">Importance: 1.48</text>
+
+  <rect x="695" y="305" width="180" height="35" rx="5" fill="#800020"/>
+  <text x="785" y="328" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="14" font-weight="bold">Compression: L2</text>
+
+  <rect x="495" y="355" width="380" height="50" rx="5" fill="#ffffff" stroke="#d1d5db" stroke-width="1"/>
+  <text x="515" y="375" fill="#374151" font-family="Arial, sans-serif" font-size="13">Original preserved in metadata</text>
+  <text x="515" y="395" fill="#374151" font-family="Arial, sans-serif" font-size="13">Links: 5 temporal, 3 spatial, 2 semantic</text>
+
+  <!-- Arrow from Decision to Final Output -->
+  <path d="M560 220 L560 260" stroke="#008B6C" stroke-width="2" fill="none" marker-end="url(#arrowGreen)"/>
+
+  <!-- Formula Box -->
+  <rect x="40" y="350" width="400" height="80" rx="8" fill="#f9fafb" stroke="#d1d5db" stroke-width="1"/>
+  <text x="60" y="378" fill="#1a1a1a" font-family="Arial, sans-serif" font-size="15" font-weight="bold">Importance Formula:</text>
+  <text x="60" y="405" fill="#374151" font-family="Arial, sans-serif" font-size="14">I = Base x (0.4 + 0.3xL + 0.2xR + 0.1xA)</text>
+  <text x="40" y="425" fill="#4F3A2B" font-family="Arial, sans-serif" font-size="12" font-style="italic">L = length factor, R = recency factor, A = access frequency</text>
 </svg>

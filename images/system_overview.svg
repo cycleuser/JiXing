@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 950 600">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="1" dy="1" stdDeviation="2" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+
+  <!-- White background -->
+  <rect width="950" height="600" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="475" y="38" text-anchor="middle" fill="#1a1a1a" font-family="Arial, sans-serif" font-size="22" font-weight="bold">Figure 1: JiXing System Overview - Complete Data Flow</text>
+
+  <!-- User Layer - Klein Blue tint -->
+  <rect x="40" y="80" width="220" height="90" rx="10" fill="#e8edf5" stroke="#002FA7" stroke-width="2" filter="url(#shadow)"/>
+  <text x="150" y="110" text-anchor="middle" fill="#002FA7" font-family="Arial, sans-serif" font-size="16" font-weight="bold">User Interface Layer</text>
+  <text x="150" y="135" text-anchor="middle" fill="#374151" font-family="Arial, sans-serif" font-size="14">CLI | Web API | Python SDK</text>
+  <text x="150" y="158" text-anchor="middle" fill="#4F3A2B" font-family="Arial, sans-serif" font-size="13" font-style="italic">jixing ollama run gemma3:1b</text>
+
+  <!-- Arrow - Klein Blue -->
+  <path d="M260 125 L310 125" stroke="#002FA7" stroke-width="2" fill="none"/>
+  <polygon points="310,119 322,125 310,131" fill="#002FA7"/>
+
+  <!-- Core Engine - Mars Green tint -->
+  <rect x="320" y="80" width="240" height="90" rx="10" fill="#e8f0ed" stroke="#008B6C" stroke-width="2" filter="url(#shadow)"/>
+  <text x="440" y="110" text-anchor="middle" fill="#008B6C" font-family="Arial, sans-serif" font-size="16" font-weight="bold">Core Engine</text>
+  <text x="440" y="135" text-anchor="middle" fill="#374151" font-family="Arial, sans-serif" font-size="14">SessionManager | ModelRunner</text>
+  <text x="440" y="158" text-anchor="middle" fill="#4F3A2B" font-family="Arial, sans-serif" font-size="13">ToolResult Pattern</text>
+
+  <!-- Arrow to Memory - Mars Green -->
+  <path d="M440 170 L440 220" stroke="#008B6C" stroke-width="2" fill="none"/>
+  <polygon points="434,220 440,232 446,220" fill="#008B6C"/>
+
+  <!-- Memory System - Burgundy Red tint -->
+  <rect x="320" y="230" width="240" height="140" rx="10" fill="#f5e8eb" stroke="#800020" stroke-width="2" filter="url(#shadow)"/>
+  <text x="440" y="260" text-anchor="middle" fill="#800020" font-family="Arial, sans-serif" font-size="16" font-weight="bold">Spatiotemporal Memory</text>
+
+  <rect x="340" y="275" width="95" height="32" rx="5" fill="#f5e8eb" stroke="#800020" stroke-width="1"/>
+  <text x="387" y="296" text-anchor="middle" fill="#800020" font-family="Arial, sans-serif" font-size="13" font-weight="bold">T-Linker</text>
+
+  <rect x="448" y="275" width="95" height="32" rx="5" fill="#e8edf5" stroke="#002FA7" stroke-width="1"/>
+  <text x="495" y="296" text-anchor="middle" fill="#002FA7" font-family="Arial, sans-serif" font-size="13" font-weight="bold">S-Linker</text>
+
+  <rect x="340" y="318" width="95" height="32" rx="5" fill="#f0ede9" stroke="#4F3A2B" stroke-width="1"/>
+  <text x="387" y="339" text-anchor="middle" fill="#4F3A2B" font-family="Arial, sans-serif" font-size="13" font-weight="bold">Compressor</text>
+
+  <rect x="448" y="318" width="95" height="32" rx="5" fill="#e8f0ed" stroke="#008B6C" stroke-width="1"/>
+  <text x="495" y="339" text-anchor="middle" fill="#008B6C" font-family="Arial, sans-serif" font-size="13" font-weight="bold">Retriever</text>
+
+  <!-- Arrow from Memory to Models - Burgundy Red -->
+  <path d="M560 300 L630 300" stroke="#800020" stroke-width="2" fill="none"/>
+  <polygon points="630,294 642,300 630,306" fill="#800020"/>
+
+  <!-- Model Layer - Van Dyke Brown tint -->
+  <rect x="640" y="230" width="270" height="140" rx="10" fill="#f0ede9" stroke="#4F3A2B" stroke-width="2" filter="url(#shadow)"/>
+  <text x="775" y="260" text-anchor="middle" fill="#4F3A2B" font-family="Arial, sans-serif" font-size="16" font-weight="bold">Model Adapter Layer</text>
+
+  <rect x="660" y="278" width="100" height="36" rx="5" fill="#002FA7"/>
+  <text x="710" y="302" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="15" font-weight="bold">OLLAMA</text>
+
+  <rect x="775" y="278" width="100" height="36" rx="5" fill="#800020"/>
+  <text x="825" y="302" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="15" font-weight="bold">MOXING</text>
+
+  <text x="775" y="340" text-anchor="middle" fill="#374151" font-family="Arial, sans-serif" font-size="14">ModelAdapterBase (ABC)</text>
+  <text x="775" y="362" text-anchor="middle" fill="#4F3A2B" font-family="Arial, sans-serif" font-size="13" font-style="italic">gemma3:1b, llama2, etc.</text>
+
+  <!-- Database - Klein Blue tint -->
+  <rect x="40" y="230" width="220" height="140" rx="10" fill="#e8edf5" stroke="#002FA7" stroke-width="2" filter="url(#shadow)"/>
+  <text x="150" y="260" text-anchor="middle" fill="#002FA7" font-family="Arial, sans-serif" font-size="16" font-weight="bold">Persistent Storage</text>
+
+  <rect x="60" y="280" width="180" height="32" rx="5" fill="#e8edf5" stroke="#002FA7" stroke-width="1"/>
+  <text x="150" y="302" text-anchor="middle" fill="#002FA7" font-family="Arial, sans-serif" font-size="14" font-weight="bold">sessions.db</text>
+
+  <rect x="60" y="322" width="180" height="32" rx="5" fill="#e8edf5" stroke="#002FA7" stroke-width="1"/>
+  <text x="150" y="344" text-anchor="middle" fill="#002FA7" font-family="Arial, sans-serif" font-size="14" font-weight="bold">spatiotemporal.db</text>
+
+  <!-- Arrow between DB and Core - Klein Blue -->
+  <path d="M260 170 L260 220 L320 220" stroke="#002FA7" stroke-width="2" fill="none"/>
+  <polygon points="320,214 332,220 320,226" fill="#002FA7"/>
+
+  <!-- Arrow between DB and Memory - Klein Blue -->
+  <path d="M260 300 L320 300" stroke="#002FA7" stroke-width="2" fill="none"/>
+  <polygon points="320,294 332,300 320,306" fill="#002FA7"/>
+
+  <!-- Response Flow (dashed) - Mars Green -->
+  <path d="M775 370 L775 450 L440 450 L440 370" stroke="#008B6C" stroke-width="2" fill="none" stroke-dasharray="8,5"/>
+  <polygon points="434,370 440,358 446,370" fill="#008B6C"/>
+
+  <!-- Output Layer - Mars Green tint -->
+  <rect x="320" y="450" width="240" height="90" rx="10" fill="#e8f0ed" stroke="#008B6C" stroke-width="2" filter="url(#shadow)"/>
+  <text x="440" y="480" text-anchor="middle" fill="#008B6C" font-family="Arial, sans-serif" font-size="16" font-weight="bold">Response + Metrics</text>
+  <text x="440" y="505" text-anchor="middle" fill="#374151" font-family="Arial, sans-serif" font-size="14">ToolResult(success, data, error)</text>
+  <text x="440" y="528" text-anchor="middle" fill="#4F3A2B" font-family="Arial, sans-serif" font-size="13">Tokens, Latency, Session ID</text>
+
+  <!-- Legend -->
+  <rect x="40" y="555" width="870" height="35" rx="6" fill="#f9fafb" stroke="#d1d5db" stroke-width="1"/>
+  <text x="130" y="578" text-anchor="middle" fill="#374151" font-family="Arial, sans-serif" font-size="13">Solid lines: Request flow</text>
+  <text x="340" y="578" text-anchor="middle" fill="#374151" font-family="Arial, sans-serif" font-size="13">Dashed lines: Response flow</text>
+  <text x="540" y="578" text-anchor="middle" fill="#374151" font-family="Arial, sans-serif" font-size="13">All data persisted to SQLite</text>
+  <text x="760" y="578" text-anchor="middle" fill="#374151" font-family="Arial, sans-serif" font-size="13">Extensible adapter pattern</text>
+</svg>

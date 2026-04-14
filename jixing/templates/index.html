@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>JiXing 记行</title>
+<style>
+:root{--kb:#002FA7;--kbl:#0047AB;--kbg:rgba(0,47,167,.15);--br:#800020;--brl:#9B1B30;--brg:rgba(128,0,32,.12);--vb:#654321;--vbl:#7A5230;--vbg:rgba(101,67,33,.1);--mg:#00A86B;--mgl:#00C77D;--mgg:rgba(0,168,107,.12)}
+[data-theme="dark"]{--bg:#0A0E1A;--bg2:#111827;--bg3:#1A2035;--tx:#F0F2F5;--tx2:#9CA3AF;--tx3:#6B7280;--bd:#2A3352;--inp:#0F1525;--sh:0 4px 12px rgba(0,0,0,.5)}
+[data-theme="light"]{--bg:#F8FAFC;--bg2:#FFF;--bg3:#F1F5F9;--tx:#1E293B;--tx2:#64748B;--tx3:#94A3B8;--bd:#E2E8F0;--inp:#FFF;--sh:0 4px 12px rgba(0,0,0,.1)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans SC','Noto Sans JP',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;transition:.3s}
+.app{max-width:1200px;margin:0 auto;padding:20px}
+.hdr{background:var(--bg2);border:1px solid var(--bd);border-radius:14px;padding:18px 24px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;box-shadow:var(--sh)}
+.hdr h1{font-size:22px;font-weight:700;background:linear-gradient(135deg,var(--kb),var(--mg));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:2px}
+.hdr p{color:var(--tx2);font-size:13px}
+.ctrls{display:flex;gap:8px;align-items:center}
+.sel,.btn2{padding:7px 12px;background:var(--inp);border:1px solid var(--bd);color:var(--tx);border-radius:8px;font-size:13px;cursor:pointer}
+.tabs{display:flex;gap:4px;margin-bottom:20px;background:var(--bg2);padding:5px;border-radius:10px;border:1px solid var(--bd)}
+.tab{padding:9px 16px;background:0 0;border:0;color:var(--tx2);cursor:pointer;border-radius:7px;font-size:14px;font-weight:500;transition:.2s}
+.tab:hover{color:var(--tx);background:var(--bg3)}
+.tab.active{background:var(--kb);color:#fff}
+.panel{display:none}
+.panel.active{display:block}
+.card{background:var(--bg2);border:1px solid var(--bd);border-radius:14px;padding:22px;box-shadow:var(--sh)}
+.fg{margin-bottom:14px}
+.fl{display:block;margin-bottom:5px;color:var(--tx2);font-size:12px;font-weight:500}
+.fi,.fs,.ft{width:100%;padding:9px 11px;background:var(--inp);border:1px solid var(--bd);color:var(--tx);border-radius:7px;font-size:14px}
+.fi:focus,.fs:focus,.ft:focus{outline:0;border-color:var(--kb);box-shadow:0 0 0 3px var(--kbg)}
+.ft{min-height:80px;resize:vertical;font-family:inherit}
+.fr{display:flex;gap:8px;align-items:flex-end}
+.fr .fg{flex:1;margin:0}
+.btn{padding:9px 16px;border:0;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;transition:.2s;white-space:nowrap}
+.bp{background:var(--kb);color:#fff}
+.bp:hover{background:var(--kbl)}
+.bs{background:var(--bg3);color:var(--tx);border:1px solid var(--bd)}
+.bs:hover{background:var(--bg3)}
+#cc{max-height:480px;overflow-y:auto;margin-bottom:14px;padding:3px}
+.msg{padding:11px 14px;border-radius:10px;margin:7px 0;line-height:1.5;font-size:13px}
+.msg.u{background:var(--kbg);border-left:3px solid var(--kb)}
+.msg.a{background:var(--mgg);border-left:3px solid var(--mg)}
+.msg.s{background:var(--vbg);border-left:3px solid var(--vb)}
+.msg.e{background:var(--brg);border-left:3px solid var(--br)}
+.meta{font-size:10px;color:var(--tx3);margin-top:5px}
+.sl{max-height:400px;overflow-y:auto}
+.si{padding:11px;background:var(--bg3);border:1px solid var(--bd);margin:5px 0;border-radius:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.si:hover{border-color:var(--kb)}
+.st{font-weight:600;font-size:13px}
+.sm{font-size:11px;color:var(--tx3)}
+.badge{padding:2px 7px;border-radius:5px;font-size:10px;font-weight:600;background:var(--kbg);color:var(--kb)}
+.sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.sc{background:var(--bg3);border:1px solid var(--bd);padding:16px;border-radius:10px;text-align:center}
+.sv{font-size:26px;font-weight:700;color:var(--kb)}
+.sl2{color:var(--tx2);font-size:12px;margin-top:3px}
+.txt{font-size:11px;margin-top:5px}
+.ok{color:var(--mg)}
+.wn{color:#D97706}
+.er{color:var(--br)}
+.nf{color:var(--tx3)}
+.ml{max-height:260px;overflow-y:auto;margin:8px 0}
+.mi{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--bd);border-radius:6px;margin:4px 0;cursor:pointer}
+.mi:hover{background:var(--bg3)}
+.mi input{accent-color:var(--kb)}
+@media(max-width:768px){.app{padding:10px}.hdr{flex-direction:column;align-items:flex-start}.ctrls{width:100%;justify-content:flex-end}.fr{flex-direction:column}}
+</style>
+</head>
+<body data-theme="dark">
+<div class="app">
+<header class="hdr">
+<div><h1>JiXing <span data-i18n="sub">记行</span></h1><p data-i18n="desc">本地大语言模型对话的持久记忆与回溯系统</p></div>
+<div class="ctrls">
+<select id="lang" class="sel"><option value="zh">🇨🇳 中文</option><option value="en">🇬🇧 English</option><option value="ja">🇯🇵 日本語</option><option value="fr">🇫🇷 Français</option></select>
+<button id="theme" class="btn2">🌙 <span data-i18n="thm">主题</span></button>
+</div>
+</header>
+<div class="tabs">
+<button class="tab active" data-t="chat" data-i18n="t1">对话</button>
+<button class="tab" data-t="sess" data-i18n="t2">会话</button>
+<button class="tab" data-t="merge" data-i18n="t3">合并</button>
+<button class="tab" data-t="search" data-i18n="t4">搜索</button>
+<button class="tab" data-t="stats" data-i18n="t5">统计</button>
+</div>
+<div id="chat" class="panel active"><div class="card">
+<div class="fg"><label class="fl" data-i18n="l1">提供商</label><select id="prov" class="fs"><option value="ollama">Ollama</option><option value="moxing">Moxing</option></select></div>
+<div class="fg"><label class="fl" data-i18n="l2">模型</label><div class="fr"><select id="mod" class="fs" style="flex:1"><option value="">-- 点击测试 --</option></select><button onclick="test()" class="bs" data-i18n="b1">测试连接</button></div><div id="mst" class="txt nf" data-i18n="h1">点击测试加载模型</div></div>
+<div class="fg"><label class="fl" data-i18n="l3">继续会话</label><select id="csel" class="fs"><option value="">-- 新会话 --</option></select></div>
+<div id="cc"></div>
+<div class="fg"><textarea id="inp" class="ft" data-i18n-placeholder="p1" placeholder="输入问题..."></textarea></div>
+<button onclick="send()" class="bp" data-i18n="b2">发送</button><input type="hidden" id="sid">
+</div></div>
+<div id="sess" class="panel"><div class="card">
+<h3 style="margin-bottom:12px" data-i18n="s1">会话管理</h3>
+<div class="fg"><select id="filt" class="fs"><option value="" data-i18n="f1">全部</option><option value="ollama">Ollama</option><option value="moxing">Moxing</option></select></div>
+<div class="sl" id="sl"></div><button onclick="loadS()" class="bs" style="margin-top:8px" data-i18n="b3">刷新</button>
+</div></div>
+<div id="merge" class="panel"><div class="card">
+<h3 style="margin-bottom:12px" data-i18n="m1">合并会话</h3><div class="ml" id="ml"></div>
+<div class="fg"><select id="mmode" class="fs"><option value="timeline" data-i18n="m2">时间轴</option><option value="reverse" data-i18n="m3">逆序</option></select></div>
+<button onclick="doMerge()" class="bp" data-i18n="b4">合并</button><div id="mres" style="margin-top:12px"></div>
+</div></div>
+<div id="search" class="panel"><div class="card">
+<h3 style="margin-bottom:12px" data-i18n="q1">搜索</h3><div class="fg"><input id="q" class="fi" data-i18n-placeholder="p2" placeholder="搜索..."></div>
+<button onclick="doQ()" class="bp" data-i18n="b5">搜索</button><div id="qr" style="margin-top:12px"></div>
+</div></div>
+<div id="stats" class="panel"><div class="card">
+<h3 style="margin-bottom:12px" data-i18n="st1">统计</h3><div class="sg" id="sg"></div><button onclick="loadSt()" class="bs" style="margin-top:8px" data-i18n="b3">刷新</button>
+</div></div>
+</div>
+<script>
+const A='/api',L={
+zh:{sub:'记行',desc:'本地大语言模型对话的持久记忆与回溯系统',t1:'对话',t2:'会话',t3:'合并',t4:'搜索',t5:'统计',l1:'提供商',l2:'模型',l3:'继续会话',b1:'测试连接',b2:'发送',b3:'刷新',b4:'合并',b5:'搜索',h1:'点击测试加载模型',p1:'输入问题...',p2:'搜索...',s1:'会话管理',m1:'合并会话',m2:'时间轴',m3:'逆序',q1:'搜索',st1:'统计',f1:'全部',n1:'-- 新会话 --',n2:'-- 点击测试 --',ok:'已连接 {n} 个模型',no:'无模型',err:'连接失败',hist:'历史 {n} 条',mg:'已合并 {n} 个',sel:'请至少选2个',ns:'暂无会话',nq:'无结果',su:'会话',sm:'消息',st:'Token',sd:'时长',u:'你',a:'助手',thm:'主题'},
+en:{sub:'JiXing',desc:'Persistent Memory for Local LLM',t1:'Chat',t2:'Sessions',t3:'Merge',t4:'Search',t5:'Stats',l1:'Provider',l2:'Model',l3:'Continue',b1:'Test',b2:'Send',b3:'Refresh',b4:'Merge',b5:'Search',h1:'Click Test to load',p1:'Ask...',p2:'Search...',s1:'Sessions',m1:'Merge',m2:'Timeline',m3:'Reverse',q1:'Search',st1:'Stats',f1:'All',n1:'-- New --',n2:'-- Click Test --',ok:'Connected {n}',no:'None',err:'Failed',hist:'History {n}',mg:'Merged {n}',sel:'Pick 2+',ns:'None',nq:'None',su:'Sessions',sm:'Messages',st:'Tokens',sd:'Time',u:'You',a:'Assistant',thm:'Theme'},
+ja:{sub:'記行',desc:'ローカルLLM永続メモリ',t1:'会話',t2:'セッション',t3:'結合',t4:'検索',t5:'統計',l1:'提供元',l2:'モデル',l3:'継続',b1:'テスト',b2:'送信',b3:'更新',b4:'結合',b5:'検索',h1:'テストで読み込み',p1:'質問...',p2:'検索...',s1:'セッション',m1:'結合',m2:'時系列',m3:'逆順',q1:'検索',st1:'統計',f1:'全て',n1:'-- 新規 --',n2:'-- テスト --',ok:'接続 {n}',no:'なし',err:'失敗',hist:'履歴 {n}',mg:'結合 {n}',sel:'2つ選択',ns:'なし',nq:'なし',su:'セッション',sm:'メッセージ',st:'トークン',sd:'時間',u:'あなた',a:'アシスタント',thm:'テーマ'},
+fr:{sub:'JiXing',desc:'Mémoire Persistante LLM',t1:'Chat',t2:'Sessions',t3:'Fusion',t4:'Recherche',t5:'Stats',l1:'Fournisseur',l2:'Modèle',l3:'Continuer',b1:'Tester',b2:'Envoyer',b3:'Actualiser',b4:'Fusionner',b5:'Chercher',h1:'Cliquez Tester',p1:'Question...',p2:'Rechercher...',s1:'Sessions',m1:'Fusion',m2:'Chrono',m3:'Inverse',q1:'Recherche',st1:'Stats',f1:'Tous',n1:'-- Nouveau --',n2:'-- Tester --',ok:'Connecté {n}',no:'Aucun',err:'Échec',hist:'Historique {n}',mg:'Fusionné {n}',sel:'Choisir 2+',ns:'Aucun',nq:'Aucun',su:'Sessions',sm:'Messages',st:'Tokens',sd:'Durée',u:'Vous',a:'Assistant',thm:'Thème'}
+};
+let c=localStorage.getItem('jx-l')||'zh';
+function t(k,p){p=p||{};var s=(L[c]&&L[c][k])||L.zh[k]||k;for(var x in p)s=s.replace('{'+x+'}',p[x]);return s}
+function apply(){
+document.querySelectorAll('[data-i18n]').forEach(function(e){e.textContent=t(e.getAttribute('data-i18n'))});
+document.querySelectorAll('[data-i18n-placeholder]').forEach(function(e){e.placeholder=t(e.getAttribute('data-i18n-placeholder'))});
+document.getElementById('mod').innerHTML='<option value="">'+t('n2')+'</option>';
+document.getElementById('csel').innerHTML='<option value="">'+t('n1')+'</option>';
+document.getElementById('lang').value=c;
+document.documentElement.lang=c==='zh'?'zh-CN':c;
+}
+document.getElementById('lang').onchange=function(e){c=e.target.value;localStorage.setItem('jx-l',c);apply();loadC()};
+document.getElementById('theme').onclick=function(){var d=document.body.getAttribute('data-theme')==='dark';document.body.setAttribute('data-theme',d?'light':'dark');this.innerHTML=(d?'☀️':'🌙')+' <span data-i18n="thm">'+t('thm')+'</span>';localStorage.setItem('jx-t',d?'light':'dark')};
+document.querySelectorAll('.tab').forEach(function(b){b.onclick=function(){document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});document.querySelectorAll('.panel').forEach(function(x){x.classList.remove('active')});b.classList.add('active');document.getElementById(b.getAttribute('data-t')).classList.add('active');var tt=b.getAttribute('data-t');if(tt==='sess')loadS();else if(tt==='merge')loadM();else if(tt==='stats')loadSt()}});
+document.getElementById('prov').onchange=function(e){if(e.target.value==='ollama')test();else document.getElementById('mod').innerHTML='<option value="">'+t('n2')+'</option>'};
+function test(){var s=document.getElementById('mod'),st=document.getElementById('mst');s.innerHTML='<option>Loading...</option>';st.className='txt nf';st.textContent='Connecting...';fetch(A+'/ollama/models').then(function(r){return r.json()}).then(function(r){if(r.success&&r.data.models.length){var lbl=c==='zh'?'选择模型':c==='ja'?'モデル選択':c==='fr'?'Choisir':'Select';s.innerHTML='<option value="">-- '+lbl+' --</option>';r.data.models.forEach(function(m){s.innerHTML+='<option value="'+m+'">'+m+'</option>'});st.className='txt ok';st.textContent=t('ok',{n:r.data.models.length})}else{s.innerHTML='<option>'+t('no')+'</option>';st.className='txt wn';st.textContent=t('no')}}).catch(function(){s.innerHTML='<option>Error</option>';st.className='txt er';st.textContent=t('err')})}
+document.getElementById('csel').onchange=function(e){if(e.target.value)loadH(e.target.value);else{document.getElementById('cc').innerHTML='';document.getElementById('sid').value=''}};
+function loadC(){fetch(A+'/sessions?limit=50').then(function(r){return r.json()}).then(function(r){if(r.success){var s=document.getElementById('csel');s.innerHTML='<option value="">'+t('n1')+'</option>';r.data.forEach(function(x){s.innerHTML+='<option value="'+x.id+'">'+x.model_name+' | '+x.created_at.substring(0,19)+' | '+(x.messages?x.messages.length:0)+' msgs</option>'})}})}
+function loadH(id){fetch(A+'/sessions/'+id+'/messages').then(function(r){return r.json()}).then(function(r){if(r.success){document.getElementById('sid').value=id;var c=document.getElementById('cc');c.innerHTML='';r.data.messages.forEach(function(m){var cls=m.role==='user'?'u':'a';var lbl=m.role==='user'?t('u'):t('a');var met=m.metrics?'<div class="meta">Tokens: '+(m.metrics.eval_count||m.metrics.tokens||'N/A')+'</div>':'';c.innerHTML+='<div class="msg '+cls+'"><strong>'+lbl+':</strong> '+m.content+met+'</div>'})}})}
+function send(){var p=document.getElementById('prov').value,m=document.getElementById('mod').value,q=document.getElementById('inp').value,s=document.getElementById('sid').value;if(!m||!q)return alert('Required');var c=document.getElementById('cc');c.innerHTML+='<div class="msg u"><strong>'+t('u')+':</strong> '+q+'</div>';var ep=p==='ollama'?A+'/api/ollama/run':A+'/api/moxing/run';fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:m,prompt:q,session_id:s})}).then(function(r){return r.json()}).then(function(r){if(r.success){document.getElementById('sid').value=r.data.session_id;c.innerHTML+='<div class="msg a"><strong>'+t('a')+':</strong> '+r.data.response+'<div class="meta">'+(r.data.metrics.eval_count||0)+' tok | '+(r.data.metrics.wall_time_ms||0)+'ms</div></div>';loadC()}else c.innerHTML+='<div class="msg e"><strong>Error:</strong> '+r.error+'</div>';document.getElementById('inp').value='';c.scrollTop=c.scrollHeight})}
+function loadS(){var f=document.getElementById('filt').value,u=A+'/sessions?limit=100'+(f?'&provider='+f:'');fetch(u).then(function(r){return r.json()}).then(function(r){var l=document.getElementById('sl');if(r.success&&r.data.length){l.innerHTML='';r.data.forEach(function(s){l.innerHTML+='<div class="si"><div><div class="st">'+s.model_name+'</div><div class="sm">'+s.id.substring(0,8)+'... | '+s.created_at.substring(0,19)+'</div></div><span class="badge">'+s.model_provider+'</span></div>'})}else l.innerHTML='<p style="color:var(--tx3);text-align:center;padding:15px">'+t('ns')+'</p>'})}
+function loadM(){fetch(A+'/sessions?limit=100').then(function(r){return r.json()}).then(function(r){var l=document.getElementById('ml');if(r.success&&r.data.length){l.innerHTML='';r.data.forEach(function(s){l.innerHTML+='<label class="mi"><input type="checkbox" value="'+s.id+'"><div><div style="font-weight:600">'+s.model_name+'</div><div style="font-size:11px;color:var(--tx3)">'+s.id.substring(0,8)+'... | '+(s.messages?s.messages.length:0)+' msgs</div></div></label>'})}else l.innerHTML='<p style="color:var(--tx3);text-align:center">'+t('ns')+'</p>'})}
+function doMerge(){var ids=[];document.querySelectorAll('#ml input:checked').forEach(function(c){ids.push(c.value)});if(ids.length<2)return alert(t('sel'));fetch(A+'/sessions/merge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_ids:ids,merge_mode:document.getElementById('mmode').value})}).then(function(r){return r.json()}).then(function(r){var d=document.getElementById('mres');if(r.success)d.innerHTML='<div class="msg s"><strong>'+t('mg',{n:ids.length})+'</strong><br>ID: '+r.data.id+'<br>Msgs: '+r.data.messages.length+'</div>';else d.innerHTML='<div class="msg e"><strong>Error:</strong> '+r.error+'</div>';loadM()})}
+function doQ(){var q=document.getElementById('q').value;if(!q)return;fetch(A+'/search?q='+encodeURIComponent(q)).then(function(r){return r.json()}).then(function(r){var c=document.getElementById('qr');if(r.success&&r.data.length){c.innerHTML='';r.data.forEach(function(m){c.innerHTML+='<div class="msg '+(m.role==='user'?'u':'a')+'"><strong>'+m.role.toUpperCase()+'</strong> ('+m.model_provider+')<div>'+m.content.substring(0,200)+'</div><div class="meta">'+m.timestamp+'</div></div>'})}else c.innerHTML='<p style="color:var(--tx3);text-align:center;padding:15px">'+t('nq')+'</p>'})}
+function loadSt(){fetch(A+'/stats').then(function(r){return r.json()}).then(function(r){if(r.success){var s=r.data;document.getElementById('sg').innerHTML='<div class="sc"><div class="sv">'+s.total_sessions+'</div><div class="sl2">'+t('su')+'</div></div><div class="sc"><div class="sv">'+s.total_messages+'</div><div class="sl2">'+t('sm')+'</div></div><div class="sc"><div class="sv">'+s.total_tokens+'</div><div class="sl2">'+t('st')+'</div></div><div class="sc"><div class="sv">'+(s.total_duration_ms/1000).toFixed(1)+'s</div><div class="sl2">'+t('sd')+'</div></div>'}})}
+document.body.setAttribute('data-theme',localStorage.getItem('jx-t')||'dark');
+document.getElementById('theme').innerHTML=(document.body.getAttribute('data-theme')==='dark'?'🌙':'☀️')+' <span data-i18n="thm">'+t('thm')+'</span>';
+apply();
+loadC();
+</script>
+</body>
+</html>

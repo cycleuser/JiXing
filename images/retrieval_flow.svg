@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 550">
+  <defs>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#002FA7"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#008B6C"/>
+    </marker>
+    <marker id="arrowBrown" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#4F3A2B"/>
+    </marker>
+  </defs>
+
+  <!-- White background -->
+  <rect width="850" height="550" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="425" y="38" text-anchor="middle" fill="#1a1a1a" font-family="Arial, sans-serif" font-size="22" font-weight="bold">Figure 5: Memory Retrieval and Ranking Pipeline</text>
+
+  <!-- Query Input - Klein Blue tint -->
+  <rect x="40" y="90" width="170" height="80" rx="8" fill="#e8edf5" stroke="#002FA7" stroke-width="2"/>
+  <text x="125" y="118" text-anchor="middle" fill="#002FA7" font-family="Arial, sans-serif" font-size="16" font-weight="bold">Query Input</text>
+  <text x="125" y="142" text-anchor="middle" fill="#374151" font-family="Arial, sans-serif" font-size="14">"Python programming"</text>
+  <text x="125" y="160" text-anchor="middle" fill="#4F3A2B" font-family="Arial, sans-serif" font-size="12">Session filter, Time range</text>
+
+  <!-- Arrow - Klein Blue -->
+  <path d="M210 130 L240 130" stroke="#002FA7" stroke-width="2" fill="none" marker-end="url(#arrowBlue)"/>
+
+  <!-- Content Matching - Mars Green tint -->
+  <rect x="240" y="90" width="170" height="80" rx="8" fill="#e8f0ed" stroke="#008B6C" stroke-width="2"/>
+  <text x="325" y="118" text-anchor="middle" fill="#008B6C" font-family="Arial, sans-serif" font-size="16" font-weight="bold">Content Matching</text>
+  <text x="325" y="142" text-anchor="middle" fill="#374151" font-family="Arial, sans-serif" font-size="14">Hash match: +10.0</text>
+  <text x="325" y="160" text-anchor="middle" fill="#4F3A2B" font-family="Arial, sans-serif" font-size="12">Substring match: +3.0</text>
+
+  <!-- Arrow - Mars Green -->
+  <path d="M410 130 L440 130" stroke="#008B6C" stroke-width="2" fill="none" marker-end="url(#arrowGreen)"/>
+
+  <!-- Importance Scoring - Burgundy Red tint -->
+  <rect x="440" y="90" width="170" height="80" rx="8" fill="#f5e8eb" stroke="#800020" stroke-width="2"/>
+  <text x="525" y="118" text-anchor="middle" fill="#800020" font-family="Arial, sans-serif" font-size="16" font-weight="bold">Importance Score</text>
+  <text x="525" y="142" text-anchor="middle" fill="#374151" font-family="Arial, sans-serif" font-size="14">Base + Importance</text>
+  <text x="525" y="160" text-anchor="middle" fill="#4F3A2B" font-family="Arial, sans-serif" font-size="12">Range: 0.1 - 2.0</text>
+
+  <!-- Arrow - Burgundy Red -->
+  <path d="M610 130 L640 130" stroke="#800020" stroke-width="2" fill="none" marker-end="url(#arrowBrown)"/>
+
+  <!-- Link Bonus - Van Dyke Brown tint -->
+  <rect x="640" y="90" width="170" height="80" rx="8" fill="#f0ede9" stroke="#4F3A2B" stroke-width="2"/>
+  <text x="725" y="118" text-anchor="middle" fill="#4F3A2B" font-family="Arial, sans-serif" font-size="16" font-weight="bold">Link Bonus</text>
+  <text x="725" y="142" text-anchor="middle" fill="#374151" font-family="Arial, sans-serif" font-size="14">T-Link: +0.5 each</text>
+  <text x="725" y="160" text-anchor="middle" fill="#4F3A2B" font-family="Arial, sans-serif" font-size="12">S-Link: +0.5 each</text>
+
+  <!-- Score Calculation Box -->
+  <rect x="40" y="220" width="770" height="140" rx="10" fill="#f9fafb" stroke="#d1d5db" stroke-width="1.5"/>
+  <text x="425" y="252" text-anchor="middle" fill="#1a1a1a" font-family="Arial, sans-serif" font-size="18" font-weight="bold">Composite Retrieval Score Calculation</text>
+
+  <text x="100" y="285" fill="#002FA7" font-family="Arial, sans-serif" font-size="15" font-weight="bold">Score = Content_Match + Importance + Link_Bonus</text>
+
+  <rect x="100" y="300" width="140" height="42" rx="5" fill="#e8edf5" stroke="#002FA7" stroke-width="1"/>
+  <text x="170" y="326" text-anchor="middle" fill="#002FA7" font-family="Arial, sans-serif" font-size="14" font-weight="bold">Content: 0-10 pts</text>
+
+  <rect x="260" y="300" width="140" height="42" rx="5" fill="#e8f0ed" stroke="#008B6C" stroke-width="1"/>
+  <text x="330" y="326" text-anchor="middle" fill="#008B6C" font-family="Arial, sans-serif" font-size="14" font-weight="bold">Importance: 0-2 pts</text>
+
+  <rect x="420" y="300" width="140" height="42" rx="5" fill="#f5e8eb" stroke="#800020" stroke-width="1"/>
+  <text x="490" y="326" text-anchor="middle" fill="#800020" font-family="Arial, sans-serif" font-size="14" font-weight="bold">Spatial: +2 if same</text>
+
+  <rect x="580" y="300" width="140" height="42" rx="5" fill="#f0ede9" stroke="#4F3A2B" stroke-width="1"/>
+  <text x="650" y="326" text-anchor="middle" fill="#4F3A2B" font-family="Arial, sans-serif" font-size="14" font-weight="bold">Links: +0.5 each</text>
+
+  <text x="100" y="350" fill="#4F3A2B" font-family="Arial, sans-serif" font-size="13" font-style="italic">Semantic similarity bonus: +0.3 per related memory (max 10)</text>
+
+  <!-- Arrow from scoring to ranking -->
+  <path d="M425 170 L425 220" stroke="#374151" stroke-width="2" fill="none" marker-end="url(#arrowBlue)"/>
+
+  <!-- Ranking and Output - Mars Green tint -->
+  <rect x="200" y="400" width="450" height="110" rx="10" fill="#e8f0ed" stroke="#008B6C" stroke-width="2"/>
+  <text x="425" y="430" text-anchor="middle" fill="#008B6C" font-family="Arial, sans-serif" font-size="18" font-weight="bold">Ranking &amp; Output</text>
+
+  <rect x="220" y="445" width="120" height="35" rx="5" fill="#008B6C"/>
+  <text x="280" y="468" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="14" font-weight="bold">Sort by Score</text>
+
+  <rect x="360" y="445" width="120" height="35" rx="5" fill="#002FA7"/>
+  <text x="420" y="468" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="14" font-weight="bold">Apply Limit</text>
+
+  <rect x="500" y="445" width="120" height="35" rx="5" fill="#800020"/>
+  <text x="560" y="468" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="14" font-weight="bold">Return Results</text>
+
+  <text x="425" y="500" text-anchor="middle" fill="#4F3A2B" font-family="Arial, sans-serif" font-size="13">Default limit: 20 memories | Sorted by composite score (descending)</text>
+
+  <!-- Arrow from scoring to ranking -->
+  <path d="M425 360 L425 400" stroke="#008B6C" stroke-width="2" fill="none" marker-end="url(#arrowGreen)"/>
+</svg>

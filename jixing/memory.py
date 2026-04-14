@@ -142,11 +142,14 @@ class SpatialMemoryLinker:
         for m in same_device:
             self._spatial_index[device_id].add(m.memory_id)
 
-    def find_spatially_related(self, memory: TimestampedMemory) -> list[TimestampedMemory]:
+    def find_spatially_related(
+        self, memory: TimestampedMemory, all_memories: list[TimestampedMemory]
+    ) -> list[TimestampedMemory]:
         device_id = memory.spatial_context.get("device_id")
         if not device_id or device_id not in self._spatial_index:
             return []
-        return list(self._spatial_index[device_id])
+        memory_id_set = self._spatial_index[device_id]
+        return [m for m in all_memories if m.memory_id in memory_id_set]
 
 
 class SemanticCompressor:
@@ -362,7 +365,7 @@ class SpatiotemporalMemoryManager:
                 neighbor.temporal_links.append(memory.memory_id)
 
         self.spatial_linker.index_by_spatial_context(memory, all_memories)
-        spatial_related = self.spatial_linker.find_spatially_related(memory)
+        spatial_related = self.spatial_linker.find_spatially_related(memory, all_memories)
         for related in spatial_related[:5]:
             if related.memory_id not in memory.spatial_links:
                 memory.spatial_links.append(related.memory_id)

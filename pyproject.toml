@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jixing"
-version = "1.0.0"
-description = "Local AI Model Assistant with Long-term Memory System"
+dynamic = ["version"]
+description = "本地大语言模型对话的持久记忆与回溯系统"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "GPL-3.0"}
@@ -35,6 +35,9 @@ gui = ["flask>=3.0.0", "flask-cors>=4.0.0"]
 
 [project.scripts]
 jixing = "jixing.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["jixing*"]
 
 [tool.setuptools.dynamic]
 version = {attr = "jixing.__version__"}

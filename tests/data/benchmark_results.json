@@ -1,0 +1,82 @@
+{
+  "system_info": {
+    "platform": "Darwin",
+    "release": "25.4.0",
+    "version": "Darwin Kernel Version 25.4.0: Thu Mar 19 19:31:09 PDT 2026; root:xnu-12377.101.15~1/RELEASE_ARM64_T8132",
+    "machine": "arm64",
+    "processor": "arm",
+    "python_version": "3.12.12",
+    "python_impl": "CPython",
+    "cpu_count": 10,
+    "hostname": "MacBook",
+    "timestamp": "2026-04-13T23:30:32.214943+00:00"
+  },
+  "store": {
+    "count": 1000,
+    "total_seconds": 0.9328,
+    "ops_per_second": 1072.0,
+    "avg_ms_per_op": 0.933
+  },
+  "retrieve": {
+    "total_queries": 100,
+    "total_seconds": 0.0355,
+    "queries_per_second": 2818.9,
+    "avg_ms_per_query": 0.355
+  },
+  "linking": {
+    "total_memories": 500,
+    "total_links": 4970,
+    "avg_links_per_memory": 9.94,
+    "compressed": 0
+  },
+  "temporal_linking": {
+    "total_memories": 100,
+    "total_pairs": 4950,
+    "linked_pairs": 4170,
+    "link_rate": 84.24
+  },
+  "compression": [
+    {
+      "name": "short",
+      "original_length": 13,
+      "compressed_length": 13,
+      "ratio": 1.0,
+      "compression_level": 1,
+      "importance_score": 0.428,
+      "time_ms": 0.001
+    },
+    {
+      "name": "medium",
+      "original_length": 999,
+      "compressed_length": 502,
+      "ratio": 1.99,
+      "compression_level": 2,
+      "importance_score": 0.72,
+      "time_ms": 0.031
+    },
+    {
+      "name": "long",
+      "original_length": 2499,
+      "compressed_length": 502,
+      "ratio": 4.98,
+      "compression_level": 2,
+      "importance_score": 0.72,
+      "time_ms": 0.026
+    },
+    {
+      "name": "very_long",
+      "original_length": 4999,
+      "compressed_length": 502,
+      "ratio": 9.96,
+      "compression_level": 2,
+      "importance_score": 0.72,
+      "time_ms": 0.035
+    }
+  ],
+  "retrieval_quality": {
+    "total_memories": 200,
+    "topics": 5,
+    "recall_at_5": 100.0,
+    "recall_at_10": 100.0
+  }
+}

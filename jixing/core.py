@@ -256,6 +256,74 @@ class SessionManager:
         results.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
         return results[:limit]
 
+    def merge_sessions(
+        self,
+        session_ids: list[str],
+        merge_mode: str = "timeline",
+        new_model_provider: Optional[str] = None,
+        new_model_name: Optional[str] = None,
+    ) -> Optional[Session]:
+        if not session_ids:
+            return None
+
+        sessions = [self._sessions.get(sid) for sid in session_ids]
+        sessions = [s for s in sessions if s is not None]
+        if not sessions:
+            return None
+
+        all_messages = []
+        for session in sessions:
+            for msg in session.messages:
+                msg_with_source = {**msg, "source_session_id": session.id}
+                all_messages.append(msg_with_source)
+
+        if merge_mode == "timeline":
+            all_messages.sort(key=lambda m: m.get("timestamp", ""))
+        elif merge_mode == "reverse_timeline":
+            all_messages.sort(key=lambda m: m.get("timestamp", ""), reverse=True)
+        else:
+            ordered_messages = []
+            for sid in session_ids:
+                session = self._sessions.get(sid)
+                if session:
+                    for msg in session.messages:
+                        msg_with_source = {**msg, "source_session_id": sid}
+                        ordered_messages.append(msg_with_source)
+            all_messages = ordered_messages
+
+        now = datetime.now(timezone.utc).isoformat()
+        merged_session = Session(
+            id=str(uuid.uuid4()),
+            model_provider=new_model_provider or sessions[0].model_provider,
+            model_name=new_model_name or sessions[0].model_name,
+            created_at=now,
+            updated_at=now,
+            system_info=sessions[0].system_info,
+        )
+
+        total_tokens = 0
+        total_duration = 0
+        clean_messages = []
+        for msg in all_messages:
+            clean_msg = {k: v for k, v in msg.items() if k != "source_session_id"}
+            clean_messages.append(clean_msg)
+            if msg.get("metrics"):
+                if "eval_count" in msg["metrics"]:
+                    total_tokens += msg["metrics"].get("eval_count", 0)
+                if "duration" in msg["metrics"]:
+                    total_duration += msg["metrics"].get("duration", 0)
+
+        merged_session.messages = clean_messages
+        merged_session.total_tokens = total_tokens
+        merged_session.total_duration_ms = total_duration
+
+        self._sessions[merged_session.id] = merged_session
+        self._current_session = merged_session
+        self._save_session(merged_session)
+
+        logger.info(f"Merged {len(sessions)} sessions into {merged_session.id}")
+        return merged_session
+
 
 class ModelAdapter:
     def __init__(self, session: Session):
@@ -415,5 +483,13 @@ class ModelRunner:
 
         manager = SessionManager.get_instance()
         manager._save_session(session)
+
+        from .db import Database
+
+        try:
+            db = Database()
+            db.save_session(session)
+        except Exception as e:
+            logger.warning(f"Failed to save to database: {e}")
 
         return session, response_text, metrics

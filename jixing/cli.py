@@ -4,17 +4,24 @@ import logging
 import sys
 from pathlib import Path
 
-from .__version__ import __version__
 from .api import (
     delete_session,
     get_session,
     get_stats,
     get_system_info,
+    merge_sessions,
     query_sessions,
     run_moxing,
     run_ollama,
     search_messages,
 )
+
+
+def _get_version():
+    from importlib import import_module
+
+    return import_module("jixing").__version__
+
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +64,7 @@ Commands:
         "-V",
         "--version",
         action="version",
-        version=f"jixing {__version__}",
+        version=f"jixing {_get_version()}",
     )
     parser.add_argument(
         "-v",
@@ -126,6 +133,17 @@ Commands:
 
     del_parser = sessions_sub.add_parser("delete", help="Delete a session")
     del_parser.add_argument("session_id", help="Session ID")
+
+    merge_parser = sessions_sub.add_parser("merge", help="Merge multiple sessions")
+    merge_parser.add_argument("session_ids", nargs="+", help="Session IDs to merge")
+    merge_parser.add_argument(
+        "--mode",
+        choices=["timeline", "reverse_timeline", "custom"],
+        default="timeline",
+        help="Merge mode",
+    )
+    merge_parser.add_argument("--provider", help="Model provider for merged session")
+    merge_parser.add_argument("--model", help="Model name for merged session")
 
     search_parser = subparsers.add_parser("search", help="Search messages")
     search_parser.add_argument("query", help="Search query")
@@ -290,6 +308,30 @@ def handle_sessions(args) -> int:
         else:
             if result.success:
                 print(f"Deleted session {args.session_id}")
+            else:
+                print(f"Error: {result.error}", file=sys.stderr)
+                return 1
+
+    elif args.subcommand == "merge":
+        result = merge_sessions(
+            session_ids=args.session_ids,
+            merge_mode=args.mode,
+            model_provider=args.provider,
+            model_name=args.model,
+        )
+        if args.json_output:
+            print(json.dumps(result.to_dict()))
+        else:
+            if result.success:
+                s = result.data
+                print(
+                    f"Merged {result.metadata.get('merged_count', len(args.session_ids))} sessions"
+                )
+                print(f"New session ID: {s['id']}")
+                print(f"Provider: {s['model_provider']}")
+                print(f"Model: {s['model_name']}")
+                print(f"Messages: {len(s['messages'])}")
+                print(f"Total tokens: {s['total_tokens']}")
             else:
                 print(f"Error: {result.error}", file=sys.stderr)
                 return 1

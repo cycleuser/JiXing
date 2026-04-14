@@ -1,4 +1,5 @@
-from .__version__ import __version__
+__version__ = "1.0.1"
+
 from .api import ToolResult
 
 __all__ = ["__version__", "ToolResult"]

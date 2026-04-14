@@ -1,10 +1,13 @@
 from dataclasses import dataclass, field
+from importlib import import_module
 from typing import Any, Optional
 
 from .core import ModelRunner, SessionManager, SystemInfo
 from .db import Database
 
-__version__ = "1.0.0"
+
+def _get_version():
+    return import_module("jixing").__version__
 
 
 @dataclass
@@ -59,11 +62,11 @@ def run_ollama(
                 "response": response_text,
                 "metrics": metrics,
             },
-            metadata={"version": __version__},
+            metadata={"version": _get_version()},
         )
 
     except Exception as e:
-        return ToolResult(success=False, error=str(e), metadata={"version": __version__})
+        return ToolResult(success=False, error=str(e), metadata={"version": _get_version()})
 
 
 def run_moxing(
@@ -102,11 +105,11 @@ def run_moxing(
                 "response": response_text,
                 "metrics": metrics,
             },
-            metadata={"version": __version__},
+            metadata={"version": _get_version()},
         )
 
     except Exception as e:
-        return ToolResult(success=False, error=str(e), metadata={"version": __version__})
+        return ToolResult(success=False, error=str(e), metadata={"version": _get_version()})
 
 
 def query_sessions(
@@ -125,10 +128,10 @@ def query_sessions(
         return ToolResult(
             success=True,
             data=[s.to_dict() for s in sessions],
-            metadata={"version": __version__, "count": len(sessions)},
+            metadata={"version": _get_version(), "count": len(sessions)},
         )
     except Exception as e:
-        return ToolResult(success=False, error=str(e), metadata={"version": __version__})
+        return ToolResult(success=False, error=str(e), metadata={"version": _get_version()})
 
 
 def get_session(*, session_id: str) -> ToolResult:
@@ -139,15 +142,15 @@ def get_session(*, session_id: str) -> ToolResult:
             return ToolResult(
                 success=False,
                 error=f"Session {session_id} not found",
-                metadata={"version": __version__},
+                metadata={"version": _get_version()},
             )
         return ToolResult(
             success=True,
             data=session.to_dict(),
-            metadata={"version": __version__},
+            metadata={"version": _get_version()},
         )
     except Exception as e:
-        return ToolResult(success=False, error=str(e), metadata={"version": __version__})
+        return ToolResult(success=False, error=str(e), metadata={"version": _get_version()})
 
 
 def delete_session(*, session_id: str) -> ToolResult:
@@ -158,15 +161,15 @@ def delete_session(*, session_id: str) -> ToolResult:
             return ToolResult(
                 success=False,
                 error=f"Session {session_id} not found",
-                metadata={"version": __version__},
+                metadata={"version": _get_version()},
             )
         return ToolResult(
             success=True,
             data={"deleted": session_id},
-            metadata={"version": __version__},
+            metadata={"version": _get_version()},
         )
     except Exception as e:
-        return ToolResult(success=False, error=str(e), metadata={"version": __version__})
+        return ToolResult(success=False, error=str(e), metadata={"version": _get_version()})
 
 
 def search_messages(
@@ -187,10 +190,10 @@ def search_messages(
         return ToolResult(
             success=True,
             data=results,
-            metadata={"version": __version__, "count": len(results)},
+            metadata={"version": _get_version(), "count": len(results)},
         )
     except Exception as e:
-        return ToolResult(success=False, error=str(e), metadata={"version": __version__})
+        return ToolResult(success=False, error=str(e), metadata={"version": _get_version()})
 
 
 def get_stats() -> ToolResult:
@@ -200,10 +203,10 @@ def get_stats() -> ToolResult:
         return ToolResult(
             success=True,
             data=stats,
-            metadata={"version": __version__},
+            metadata={"version": _get_version()},
         )
     except Exception as e:
-        return ToolResult(success=False, error=str(e), metadata={"version": __version__})
+        return ToolResult(success=False, error=str(e), metadata={"version": _get_version()})
 
 
 def get_system_info() -> ToolResult:
@@ -212,7 +215,37 @@ def get_system_info() -> ToolResult:
         return ToolResult(
             success=True,
             data=info,
-            metadata={"version": __version__},
+            metadata={"version": _get_version()},
         )
     except Exception as e:
-        return ToolResult(success=False, error=str(e), metadata={"version": __version__})
+        return ToolResult(success=False, error=str(e), metadata={"version": _get_version()})
+
+
+def merge_sessions(
+    *,
+    session_ids: list[str],
+    merge_mode: str = "timeline",
+    model_provider: Optional[str] = None,
+    model_name: Optional[str] = None,
+) -> ToolResult:
+    try:
+        manager = SessionManager.get_instance()
+        merged = manager.merge_sessions(
+            session_ids=session_ids,
+            merge_mode=merge_mode,
+            new_model_provider=model_provider,
+            new_model_name=model_name,
+        )
+        if merged is None:
+            return ToolResult(
+                success=False,
+                error="No valid sessions to merge",
+                metadata={"version": _get_version()},
+            )
+        return ToolResult(
+            success=True,
+            data=merged.to_dict(),
+            metadata={"version": _get_version(), "merged_count": len(session_ids)},
+        )
+    except Exception as e:
+        return ToolResult(success=False, error=str(e), metadata={"version": _get_version()})
