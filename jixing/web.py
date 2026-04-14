@@ -3,7 +3,15 @@ import time
 import threading
 
 import requests
-from flask import Flask, Response, jsonify, render_template, request, stream_with_context
+from flask import (
+    Flask,
+    Response,
+    jsonify,
+    make_response,
+    render_template,
+    request,
+    stream_with_context,
+)
 
 from .api import (
     delete_session,
@@ -20,6 +28,13 @@ from .core import SessionManager, ModelRunner, SystemInfo
 def create_app() -> Flask:
     app = Flask(__name__, template_folder="templates", static_folder="static")
     app.config["JSON_AS_ASCII"] = False
+
+    @app.after_request
+    def add_cache_control(response):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
 
     @app.route("/")
     def index():

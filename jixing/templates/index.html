@@ -89,7 +89,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans SC','Not
 <div class="fg"><label class="fl" data-i18n="l3">继续会话</label><select id="csel" class="fs"><option value="">-- 新会话 --</option></select></div>
 <div id="cc"></div>
 <div class="fg"><textarea id="inp" class="ft" data-i18n-placeholder="p1" placeholder="输入问题..."></textarea></div>
-<button id="sendBtn" onclick="send()" class="bp" data-i18n="b2">发送</button><input type="hidden" id="sid">
+<button id="sendBtn" onclick="doSend()" class="bp" data-i18n="b2">发送</button><input type="hidden" id="sid">
 </div></div>
 <div id="sess" class="panel"><div class="card">
 <h3 style="margin-bottom:12px" data-i18n="s1">会话管理</h3>
@@ -110,90 +110,101 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans SC','Not
 </div></div>
 </div>
 <script>
-var A='/api',L={
+var API='/api',L={
 zh:{sub:'记行',desc:'本地大语言模型对话的持久记忆与回溯系统',t1:'对话',t2:'会话',t3:'合并',t4:'搜索',t5:'统计',l1:'提供商',l2:'模型',l3:'继续会话',b1:'测试连接',b2:'发送',b3:'刷新',b4:'合并',b5:'搜索',h1:'点击测试加载模型',p1:'输入问题...',p2:'搜索...',s1:'会话管理',m1:'合并会话',m2:'时间轴',m3:'逆序',q1:'搜索',st1:'统计',f1:'全部',n1:'-- 新会话 --',n2:'-- 点击测试 --',ok:'已连接 {n} 个模型',no:'无模型',err:'连接失败',hist:'历史 {n} 条',mg:'已合并 {n} 个',sel:'请至少选2个',ns:'暂无会话',nq:'无结果',su:'会话',sm:'消息',st:'Token',sd:'时长',u:'你',a:'助手',thm:'主题',thinking:'思考中...'},
 en:{sub:'JiXing',desc:'Persistent Memory for Local LLM',t1:'Chat',t2:'Sessions',t3:'Merge',t4:'Search',t5:'Stats',l1:'Provider',l2:'Model',l3:'Continue',b1:'Test',b2:'Send',b3:'Refresh',b4:'Merge',b5:'Search',h1:'Click Test to load',p1:'Ask...',p2:'Search...',s1:'Sessions',m1:'Merge',m2:'Timeline',m3:'Reverse',q1:'Search',st1:'Stats',f1:'All',n1:'-- New --',n2:'-- Click Test --',ok:'Connected {n}',no:'None',err:'Failed',hist:'History {n}',mg:'Merged {n}',sel:'Pick 2+',ns:'None',nq:'None',su:'Sessions',sm:'Messages',st:'Tokens',sd:'Time',u:'You',a:'Assistant',thm:'Theme',thinking:'Thinking...'},
 ja:{sub:'記行',desc:'ローカルLLM永続メモリ',t1:'会話',t2:'セッション',t3:'結合',t4:'検索',t5:'統計',l1:'提供元',l2:'モデル',l3:'継続',b1:'テスト',b2:'送信',b3:'更新',b4:'結合',b5:'検索',h1:'テストで読み込み',p1:'質問...',p2:'検索...',s1:'セッション',m1:'結合',m2:'時系列',m3:'逆順',q1:'検索',st1:'統計',f1:'全て',n1:'-- 新規 --',n2:'-- テスト --',ok:'接続 {n}',no:'なし',err:'失敗',hist:'履歴 {n}',mg:'結合 {n}',sel:'2つ選択',ns:'なし',nq:'なし',su:'セッション',sm:'メッセージ',st:'トークン',sd:'時間',u:'あなた',a:'アシスタント',thm:'テーマ',thinking:'考え中...'},
 fr:{sub:'JiXing',desc:'Mémoire Persistante LLM',t1:'Chat',t2:'Sessions',t3:'Fusion',t4:'Recherche',t5:'Stats',l1:'Fournisseur',l2:'Modèle',l3:'Continuer',b1:'Tester',b2:'Envoyer',b3:'Actualiser',b4:'Fusionner',b5:'Chercher',h1:'Cliquez Tester',p1:'Question...',p2:'Rechercher...',s1:'Sessions',m1:'Fusion',m2:'Chrono',m3:'Inverse',q1:'Recherche',st1:'Stats',f1:'Tous',n1:'-- Nouveau --',n2:'-- Tester --',ok:'Connecté {n}',no:'Aucun',err:'Échec',hist:'Historique {n}',mg:'Fusionné {n}',sel:'Choisir 2+',ns:'Aucun',nq:'Aucun',su:'Sessions',sm:'Messages',st:'Tokens',sd:'Durée',u:'Vous',a:'Assistant',thm:'Thème',thinking:'Réflexion...'}
 };
-var c=localStorage.getItem('jx-l')||'zh';
-var sending=false;
-function t(k,p){p=p||{};var s=(L[c]&&L[c][k])||L.zh[k]||k;for(var x in p)s=s.replace('{'+x+'}',p[x]);return s}
-function apply(){
+var lang=localStorage.getItem('jx-l')||'zh';
+var busy=false;
+function t(k,p){p=p||{};var s=(L[lang]&&L[lang][k])||L.zh[k]||k;for(var x in p)s=s.replace('{'+x+'}',p[x]);return s}
+function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML.replace(/\n/g,'<br>')}
+function applyLang(){
 document.querySelectorAll('[data-i18n]').forEach(function(e){e.textContent=t(e.getAttribute('data-i18n'))});
 document.querySelectorAll('[data-i18n-placeholder]').forEach(function(e){e.placeholder=t(e.getAttribute('data-i18n-placeholder'))});
 document.getElementById('mod').innerHTML='<option value="">'+t('n2')+'</option>';
 document.getElementById('csel').innerHTML='<option value="">'+t('n1')+'</option>';
-document.getElementById('lang').value=c;
-document.documentElement.lang=c==='zh'?'zh-CN':c;
+document.getElementById('lang').value=lang;
+document.documentElement.lang=lang==='zh'?'zh-CN':lang;
 }
-document.getElementById('lang').onchange=function(e){c=e.target.value;localStorage.setItem('jx-l',c);apply();loadC()};
+document.getElementById('lang').onchange=function(e){lang=e.target.value;localStorage.setItem('jx-l',lang);applyLang();loadC()};
 document.getElementById('theme').onclick=function(){var d=document.body.getAttribute('data-theme')==='dark';document.body.setAttribute('data-theme',d?'light':'dark');this.innerHTML=(d?'☀️':'🌙')+' <span data-i18n="thm">'+t('thm')+'</span>';localStorage.setItem('jx-t',d?'light':'dark')};
 document.querySelectorAll('.tab').forEach(function(b){b.onclick=function(){document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});document.querySelectorAll('.panel').forEach(function(x){x.classList.remove('active')});b.classList.add('active');document.getElementById(b.getAttribute('data-t')).classList.add('active');var tt=b.getAttribute('data-t');if(tt==='sess')loadS();else if(tt==='merge')loadM();else if(tt==='stats')loadSt()}});
 document.getElementById('prov').onchange=function(e){if(e.target.value==='ollama')test();else document.getElementById('mod').innerHTML='<option value="">'+t('n2')+'</option>'};
-document.getElementById('inp').addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
-function test(){var s=document.getElementById('mod'),st=document.getElementById('mst');s.innerHTML='<option>Loading...</option>';st.className='txt nf';st.textContent='Connecting...';fetch(A+'/ollama/models').then(function(r){return r.json()}).then(function(r){if(r.success&&r.data.models.length){var lbl=c==='zh'?'选择模型':c==='ja'?'モデル選択':c==='fr'?'Choisir':'Select';s.innerHTML='<option value="">-- '+lbl+' --</option>';r.data.models.forEach(function(m){s.innerHTML+='<option value="'+m+'">'+m+'</option>'});st.className='txt ok';st.textContent=t('ok',{n:r.data.models.length})}else{s.innerHTML='<option>'+t('no')+'</option>';st.className='txt wn';st.textContent=t('no')}}).catch(function(){s.innerHTML='<option>Error</option>';st.className='txt er';st.textContent=t('err')})}
+document.getElementById('inp').onkeydown=function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();doSend()}};
+function test(){var s=document.getElementById('mod'),st=document.getElementById('mst');s.innerHTML='<option>Loading...</option>';st.className='txt nf';st.textContent='Connecting...';fetch(API+'/ollama/models').then(function(r){return r.json()}).then(function(r){if(r.success&&r.data.models.length){var lbl=lang==='zh'?'选择模型':lang==='ja'?'モデル選択':lang==='fr'?'Choisir':'Select';s.innerHTML='<option value="">-- '+lbl+' --</option>';r.data.models.forEach(function(m){s.innerHTML+='<option value="'+m+'">'+m+'</option>'});st.className='txt ok';st.textContent=t('ok',{n:r.data.models.length})}else{s.innerHTML='<option>'+t('no')+'</option>';st.className='txt wn';st.textContent=t('no')}}).catch(function(){s.innerHTML='<option>Error</option>';st.className='txt er';st.textContent=t('err')})}
 document.getElementById('csel').onchange=function(e){if(e.target.value)loadH(e.target.value);else{document.getElementById('cc').innerHTML='';document.getElementById('sid').value=''}};
-function loadC(){fetch(A+'/sessions?limit=50').then(function(r){return r.json()}).then(function(r){if(r.success){var s=document.getElementById('csel');s.innerHTML='<option value="">'+t('n1')+'</option>';r.data.forEach(function(x){s.innerHTML+='<option value="'+x.id+'">'+x.model_name+' | '+x.created_at.substring(0,19)+' | '+(x.messages?x.messages.length:0)+' msgs</option>'})}})}
-function loadH(id){fetch(A+'/sessions/'+id+'/messages').then(function(r){return r.json()}).then(function(r){if(r.success){document.getElementById('sid').value=id;var cc=document.getElementById('cc');cc.innerHTML='';r.data.messages.forEach(function(m){var cls=m.role==='user'?'u':'a';var lbl=m.role==='user'?t('u'):t('a');var met=m.metrics?'<div class="meta">Tokens: '+(m.metrics.eval_count||m.metrics.tokens||'N/A')+'</div>':'';cc.innerHTML+='<div class="msg '+cls+'"><strong>'+lbl+':</strong> '+escHtml(m.content)+met+'</div>'});cc.scrollTop=cc.scrollHeight}})}
-function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}
-function send(){
-if(sending)return;
-var p=document.getElementById('prov').value,m=document.getElementById('mod').value,q=document.getElementById('inp').value.trim(),sid=document.getElementById('sid').value;
-if(!m){alert(t('n2'));return}
-if(!q)return;
-sending=true;
+function loadC(){fetch(API+'/sessions?limit=50').then(function(r){return r.json()}).then(function(r){if(r.success){var s=document.getElementById('csel');s.innerHTML='<option value="">'+t('n1')+'</option>';r.data.forEach(function(x){s.innerHTML+='<option value="'+x.id+'">'+x.model_name+' | '+x.created_at.substring(0,19)+' | '+(x.messages?x.messages.length:0)+' msgs</option>'})}})}
+function loadH(id){fetch(API+'/sessions/'+id+'/messages').then(function(r){return r.json()}).then(function(r){if(r.success){document.getElementById('sid').value=id;var cc=document.getElementById('cc');cc.innerHTML='';r.data.messages.forEach(function(m){var cls=m.role==='user'?'u':'a';var lbl=m.role==='user'?t('u'):t('a');var met=m.metrics?'<div class="meta">Tokens: '+(m.metrics.eval_count||m.metrics.tokens||'N/A')+'</div>':'';cc.innerHTML+='<div class="msg '+cls+'"><strong>'+lbl+':</strong> '+esc(m.content)+met+'</div>'});cc.scrollTop=cc.scrollHeight}})}
+function doSend(){
+if(busy)return;
+var prov=document.getElementById('prov').value;
+var model=document.getElementById('mod').value;
+var prompt=document.getElementById('inp').value.trim();
+var sid=document.getElementById('sid').value;
+if(!model){alert(t('n2'));return}
+if(!prompt)return;
+busy=true;
 var btn=document.getElementById('sendBtn');
 btn.disabled=true;
 btn.textContent=t('thinking');
 var cc=document.getElementById('cc');
-cc.innerHTML+='<div class="msg u"><strong>'+t('u')+':</strong> '+escHtml(q)+'</div>';
+cc.innerHTML+='<div class="msg u"><strong>'+t('u')+':</strong> '+esc(prompt)+'</div>';
 document.getElementById('inp').value='';
 var aDiv=document.createElement('div');
 aDiv.className='msg a';
-aDiv.innerHTML='<strong>'+t('a')+':</strong> <span id="stream-out"></span><span class="cursor"></span>';
+var outSpan=document.createElement('span');
+var cursor=document.createElement('span');
+cursor.className='cursor';
+aDiv.innerHTML='<strong>'+t('a')+':</strong> ';
+aDiv.appendChild(outSpan);
+aDiv.appendChild(cursor);
 cc.appendChild(aDiv);
 cc.scrollTop=cc.scrollHeight;
-var out=document.getElementById('stream-out');
 var fullText='';
-var ep=p==='ollama'?A+'/api/ollama/stream':A+'/api/moxing/run';
-if(p==='ollama'){
-fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:m,prompt:q,session_id:sid})}).then(function(resp){
+var ep=prov==='ollama'?API+'/ollama/stream':API+'/moxing/run';
+if(prov==='ollama'){
+fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:model,prompt:prompt,session_id:sid})}).then(function(resp){
+if(!resp.ok)throw new Error('HTTP '+resp.status);
 var reader=resp.body.getReader();
 var decoder=new TextDecoder();
-var buf='';
-function read(){
+var buffer='';
+function pump(){
 reader.read().then(function(result){
 if(result.done){
-out.innerHTML=escHtml(fullText);
-var cursor=aDiv.querySelector('.cursor');
-if(cursor)cursor.remove();
+cursor.remove();
+if(fullText){
+outSpan.innerHTML=esc(fullText);
 var meta=document.createElement('div');
 meta.className='meta';
-meta.textContent=t('ok',{n:''}).replace(' 个模型','');
+meta.textContent=t('su');
 aDiv.appendChild(meta);
-sending=false;
+}
+busy=false;
 btn.disabled=false;
 btn.textContent=t('b2');
 loadC();
 cc.scrollTop=cc.scrollHeight;
 return;
 }
-buf+=decoder.decode(result.value,{stream:true});
-var lines=buf.split('\n');
-buf=lines.pop()||'';
+buffer+=decoder.decode(result.value,{stream:true});
+var lines=buffer.split('\n\n');
+buffer=lines.pop()||'';
 lines.forEach(function(line){
-if(line.startsWith('data: ')){
+line=line.trim();
+if(line.indexOf('data: ')===0){
 try{
 var d=JSON.parse(line.substring(6));
 if(d.error){
-out.innerHTML='<span style="color:var(--br)">Error: '+escHtml(d.error)+'</span>';
-sending=false;btn.disabled=false;btn.textContent=t('b2');
+outSpan.innerHTML='<span style="color:var(--br)">Error: '+esc(d.error)+'</span>';
+cursor.remove();
+busy=false;btn.disabled=false;btn.textContent=t('b2');
 return;
 }
-if(d.token){
+if(d.token!==undefined){
 fullText+=d.token;
-out.innerHTML=escHtml(fullText);
+outSpan.innerHTML=esc(fullText);
 cc.scrollTop=cc.scrollHeight;
 }
 if(d.done&&d.session_id){
@@ -205,42 +216,53 @@ meta.textContent=(d.metrics.eval_count||0)+' tok | '+(d.metrics.wall_time_ms||0)
 aDiv.appendChild(meta);
 }
 }
-}catch(e){}
+}catch(e){console.error('Parse error:',e)}
 }
 });
-read();
-}).catch(function(){
-out.innerHTML='<span style="color:var(--br)">Connection lost</span>';
-sending=false;btn.disabled=false;btn.textContent=t('b2');
+pump();
+}).catch(function(err){
+console.error('Stream error:',err);
+outSpan.innerHTML='<span style="color:var(--br)">Error: '+esc(err.message)+'</span>';
+cursor.remove();
+busy=false;btn.disabled=false;btn.textContent=t('b2');
 });
 }
-read();
-}).catch(function(e){
-out.innerHTML='<span style="color:var(--br)">Error: '+escHtml(e.message)+'</span>';
-sending=false;btn.disabled=false;btn.textContent=t('b2');
+pump();
+}).catch(function(err){
+console.error('Fetch error:',err);
+outSpan.innerHTML='<span style="color:var(--br)">Error: '+esc(err.message)+'</span>';
+cursor.remove();
+busy=false;btn.disabled=false;btn.textContent=t('b2');
 });
 }else{
-fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:m,prompt:q,session_id:sid})}).then(function(r){return r.json()}).then(function(r){
+fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:model,prompt:prompt,session_id:sid})}).then(function(r){return r.json()}).then(function(r){
+cursor.remove();
 if(r.success){
-out.innerHTML=escHtml(r.data.response);
-var cursor=aDiv.querySelector('.cursor');if(cursor)cursor.remove();
+outSpan.innerHTML=esc(r.data.response);
 document.getElementById('sid').value=r.data.session_id;
 var meta=document.createElement('div');meta.className='meta';
 meta.textContent=(r.data.metrics.eval_count||r.data.metrics.tokens||0)+' tok | '+(r.data.metrics.wall_time_ms||0)+'ms';
 aDiv.appendChild(meta);
-}else{out.innerHTML='<span style="color:var(--br)">Error: '+escHtml(r.error)+'</span>'}
-sending=false;btn.disabled=false;btn.textContent=t('b2');loadC();cc.scrollTop=cc.scrollHeight;
-}).catch(function(e){out.innerHTML='<span style="color:var(--br)">Error: '+escHtml(e.message)+'</span>';sending=false;btn.disabled=false;btn.textContent=t('b2')});
+}else{
+outSpan.innerHTML='<span style="color:var(--br)">Error: '+esc(r.error)+'</span>';
+}
+busy=false;btn.disabled=false;btn.textContent=t('b2');loadC();cc.scrollTop=cc.scrollHeight;
+}).catch(function(e){outSpan.innerHTML='<span style="color:var(--br)">Error: '+esc(e.message)+'</span>';cursor.remove();busy=false;btn.disabled=false;btn.textContent=t('b2')});
 }
 }
-function loadS(){var f=document.getElementById('filt').value,u=A+'/sessions?limit=100'+(f?'&provider='+f:'');fetch(u).then(function(r){return r.json()}).then(function(r){var l=document.getElementById('sl');if(r.success&&r.data.length){l.innerHTML='';r.data.forEach(function(s){l.innerHTML+='<div class="si"><div><div class="st">'+s.model_name+'</div><div class="sm">'+s.id.substring(0,8)+'... | '+s.created_at.substring(0,19)+'</div></div><span class="badge">'+s.model_provider+'</span></div>'})}else l.innerHTML='<p style="color:var(--tx3);text-align:center;padding:15px">'+t('ns')+'</p>'})}
-function loadM(){fetch(A+'/sessions?limit=100').then(function(r){return r.json()}).then(function(r){var l=document.getElementById('ml');if(r.success&&r.data.length){l.innerHTML='';r.data.forEach(function(s){l.innerHTML+='<label class="mi"><input type="checkbox" value="'+s.id+'"><div><div style="font-weight:600">'+s.model_name+'</div><div style="font-size:11px;color:var(--tx3)">'+s.id.substring(0,8)+'... | '+(s.messages?s.messages.length:0)+' msgs</div></div></label>'})}else l.innerHTML='<p style="color:var(--tx3);text-align:center">'+t('ns')+'</p>'})}
-function doMerge(){var ids=[];document.querySelectorAll('#ml input:checked').forEach(function(x){ids.push(x.value)});if(ids.length<2)return alert(t('sel'));fetch(A+'/sessions/merge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_ids:ids,merge_mode:document.getElementById('mmode').value})}).then(function(r){return r.json()}).then(function(r){var d=document.getElementById('mres');if(r.success)d.innerHTML='<div class="msg s"><strong>'+t('mg',{n:ids.length})+'</strong><br>ID: '+r.data.id+'<br>Msgs: '+r.data.messages.length+'</div>';else d.innerHTML='<div class="msg e"><strong>Error:</strong> '+r.error+'</div>';loadM()})}
-function doQ(){var q=document.getElementById('q').value;if(!q)return;fetch(A+'/search?q='+encodeURIComponent(q)).then(function(r){return r.json()}).then(function(r){var cc=document.getElementById('qr');if(r.success&&r.data.length){cc.innerHTML='';r.data.forEach(function(m){cc.innerHTML+='<div class="msg '+(m.role==='user'?'u':'a')+'"><strong>'+m.role.toUpperCase()+'</strong> ('+m.model_provider+')<div>'+escHtml(m.content).substring(0,200)+'</div><div class="meta">'+m.timestamp+'</div></div>'})}else cc.innerHTML='<p style="color:var(--tx3);text-align:center;padding:15px">'+t('nq')+'</p>'})}
-function loadSt(){fetch(A+'/stats').then(function(r){return r.json()}).then(function(r){if(r.success){var s=r.data;document.getElementById('sg').innerHTML='<div class="sc"><div class="sv">'+s.total_sessions+'</div><div class="sl2">'+t('su')+'</div></div><div class="sc"><div class="sv">'+s.total_messages+'</div><div class="sl2">'+t('sm')+'</div></div><div class="sc"><div class="sv">'+s.total_tokens+'</div><div class="sl2">'+t('st')+'</div></div><div class="sc"><div class="sv">'+(s.total_duration_ms/1000).toFixed(1)+'s</div><div class="sl2">'+t('sd')+'</div></div>'}})}
+function loadS(){var f=document.getElementById('filt').value,u=API+'/sessions?limit=100'+(f?'&provider='+f:'');fetch(u).then(function(r){return r.json()}).then(function(r){var l=document.getElementById('sl');if(r.success&&r.data.length){l.innerHTML='';r.data.forEach(function(s){l.innerHTML+='<div class="si" onclick="contSession(\''+s.id+'\')"><div><div class="st">'+s.model_name+'</div><div class="sm">'+s.id.substring(0,8)+'... | '+s.created_at.substring(0,19)+' | '+(s.messages?s.messages.length:0)+' msgs</div></div><span class="badge">'+s.model_provider+'</span></div>'})}else l.innerHTML='<p style="color:var(--tx3);text-align:center;padding:15px">'+t('ns')+'</p>'})}
+function contSession(id){
+document.getElementById('csel').value=id;
+loadH(id);
+document.querySelector('.tab[data-t="chat"]').click();
+}
+function loadM(){fetch(API+'/sessions?limit=100').then(function(r){return r.json()}).then(function(r){var l=document.getElementById('ml');if(r.success&&r.data.length){l.innerHTML='';r.data.forEach(function(s){l.innerHTML+='<label class="mi"><input type="checkbox" value="'+s.id+'"><div><div style="font-weight:600">'+s.model_name+'</div><div style="font-size:11px;color:var(--tx3)">'+s.id.substring(0,8)+'... | '+(s.messages?s.messages.length:0)+' msgs</div></div></label>'})}else l.innerHTML='<p style="color:var(--tx3);text-align:center">'+t('ns')+'</p>'})}
+function doMerge(){var ids=[];document.querySelectorAll('#ml input:checked').forEach(function(x){ids.push(x.value)});if(ids.length<2)return alert(t('sel'));fetch(API+'/sessions/merge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({session_ids:ids,merge_mode:document.getElementById('mmode').value})}).then(function(r){return r.json()}).then(function(r){var d=document.getElementById('mres');if(r.success){d.innerHTML='<div class="msg s"><strong>'+t('mg',{n:ids.length})+'</strong><br>ID: '+r.data.id+'<br>Msgs: '+r.data.messages.length+'</div>';contSession(r.data.id)}else d.innerHTML='<div class="msg e"><strong>Error:</strong> '+r.error+'</div>';loadM()})}
+function doQ(){var q=document.getElementById('q').value;if(!q)return;fetch(API+'/search?q='+encodeURIComponent(q)).then(function(r){return r.json()}).then(function(r){var cc=document.getElementById('qr');if(r.success&&r.data.length){cc.innerHTML='';r.data.forEach(function(m){cc.innerHTML+='<div class="msg '+(m.role==='user'?'u':'a')+'"><strong>'+m.role.toUpperCase()+'</strong> ('+m.model_provider+')<div>'+esc(m.content).substring(0,200)+'</div><div class="meta">'+m.timestamp+'</div></div>'})}else cc.innerHTML='<p style="color:var(--tx3);text-align:center;padding:15px">'+t('nq')+'</p>'})}
+function loadSt(){fetch(API+'/stats').then(function(r){return r.json()}).then(function(r){if(r.success){var s=r.data;document.getElementById('sg').innerHTML='<div class="sc"><div class="sv">'+s.total_sessions+'</div><div class="sl2">'+t('su')+'</div></div><div class="sc"><div class="sv">'+s.total_messages+'</div><div class="sl2">'+t('sm')+'</div></div><div class="sc"><div class="sv">'+s.total_tokens+'</div><div class="sl2">'+t('st')+'</div></div><div class="sc"><div class="sv">'+(s.total_duration_ms/1000).toFixed(1)+'s</div><div class="sl2">'+t('sd')+'</div></div>'}})}
 document.body.setAttribute('data-theme',localStorage.getItem('jx-t')||'dark');
 document.getElementById('theme').innerHTML=(document.body.getAttribute('data-theme')==='dark'?'🌙':'☀️')+' <span data-i18n="thm">'+t('thm')+'</span>';
-apply();
+applyLang();
 loadC();
 </script>
 </body>
