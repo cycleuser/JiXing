@@ -87,6 +87,10 @@ class Session:
     messages: list[dict] = field(default_factory=list)
     total_tokens: int = 0
     total_duration_ms: int = 0
+    context_limit: int = 128000
+    parent_session_id: Optional[str] = None
+    migration_metadata: dict = field(default_factory=dict)
+    goal: str = ""
 
     def add_message(
         self, role: str, content: str, metrics: Optional[dict[str, Any]] = None
@@ -179,6 +183,10 @@ class SessionManager:
         model_provider: str,
         model_name: str,
         system_info: Optional[dict] = None,
+        context_limit: int = 128000,
+        parent_session_id: Optional[str] = None,
+        migration_metadata: Optional[dict] = None,
+        goal: str = "",
     ) -> Session:
         now = datetime.now(timezone.utc).isoformat()
         session = Session(
@@ -188,6 +196,10 @@ class SessionManager:
             created_at=now,
             updated_at=now,
             system_info=system_info or SystemInfo.collect().to_dict(),
+            context_limit=context_limit,
+            parent_session_id=parent_session_id,
+            migration_metadata=migration_metadata or {},
+            goal=goal,
         )
         self._sessions[session.id] = session
         self._current_session = session
@@ -299,6 +311,13 @@ class SessionManager:
             created_at=now,
             updated_at=now,
             system_info=sessions[0].system_info,
+            context_limit=max(s.context_limit for s in sessions),
+            parent_session_id=session_ids[0] if session_ids else None,
+            migration_metadata={
+                "merged_from": session_ids,
+                "merge_mode": merge_mode,
+                "merge_timestamp": now,
+            },
         )
 
         total_tokens = 0
@@ -399,6 +418,87 @@ class OllamaAdapter(ModelAdapter):
 
         return response_text, metrics, {}
 
+    def run_stream(
+        self, prompt: str, history: Optional[list[dict]] = None, images: Optional[list[str]] = None, **kwargs
+    ):
+        """Stream response from Ollama API. Yields chunks of text."""
+        url = f"{self.base_url}/api/chat"
+        messages = history or [{"role": "user", "content": prompt}]
+        if not history and prompt:
+            messages = [{"role": "user", "content": prompt}]
+
+        payload = {
+            "model": self.session.model_name,
+            "messages": messages,
+            "stream": True,
+        }
+        if images:
+            payload["images"] = images
+        payload.update(kwargs)
+
+        response = requests.post(url, json=payload, stream=True, timeout=kwargs.get("timeout", 300))
+        response.raise_for_status()
+
+        full_response = ""
+        metrics = {}
+        for line in response.iter_lines():
+            if line:
+                try:
+                    data = json.loads(line)
+                    chunk = data.get("message", {}).get("content", "")
+                    if chunk:
+                        full_response += chunk
+                        yield chunk, False, {}
+                    if data.get("done", False):
+                        metrics = {
+                            "eval_count": data.get("eval_count", 0),
+                            "eval_duration": data.get("eval_duration", 0),
+                            "load_duration": data.get("load_duration", 0),
+                            "prompt_eval_count": data.get("prompt_eval_count", 0),
+                            "prompt_eval_duration": data.get("prompt_eval_duration", 0),
+                            "total_duration": data.get("total_duration", 0),
+                        }
+                        yield "", True, metrics
+                except json.JSONDecodeError:
+                    continue
+
+    def list_models(self) -> list[dict]:
+        """List available models from Ollama."""
+        url = f"{self.base_url}/api/tags"
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+        return data.get("models", [])
+
+    def show_model(self, model_name: str) -> dict:
+        """Show model information."""
+        url = f"{self.base_url}/api/show"
+        response = requests.post(url, json={"name": model_name}, timeout=30)
+        response.raise_for_status()
+        return response.json()
+
+    def pull_model(self, model_name: str, stream: bool = False):
+        """Pull a model from Ollama registry."""
+        url = f"{self.base_url}/api/pull"
+        payload = {"name": model_name, "stream": stream}
+        if stream:
+            response = requests.post(url, json=payload, stream=True, timeout=600)
+            response.raise_for_status()
+            for line in response.iter_lines():
+                if line:
+                    yield json.loads(line)
+        else:
+            response = requests.post(url, json=payload, timeout=600)
+            response.raise_for_status()
+            return response.json()
+
+    def delete_model(self, model_name: str) -> bool:
+        """Delete a model from Ollama."""
+        url = f"{self.base_url}/api/delete"
+        response = requests.delete(url, json={"name": model_name}, timeout=30)
+        response.raise_for_status()
+        return response.status_code == 200
+
 
 class MoxingAdapter(ModelAdapter):
     def __init__(self, session: Session, base_url: str = "http://localhost:8080"):
@@ -453,11 +553,41 @@ class ModelRunner:
         prompt: str,
         session: Optional[Session] = None,
         system_info: Optional[dict] = None,
+        context_manager=None,
+        goal: str = "",
+        compressor_fn=None,
         **kwargs,
     ) -> tuple[Session, str, dict[str, Any]]:
         if session is None:
             manager = SessionManager.get_instance()
             session = manager.create_session(provider, model_name, system_info)
+
+        if context_manager and goal:
+            session.goal = goal
+
+        if context_manager and session.messages:
+            usage = context_manager.get_context_usage(session.messages)
+            if usage["needs_compression"]:
+                result = context_manager.auto_handle_overflow(
+                    session_id=session.id,
+                    messages=session.messages,
+                    goal=session.goal or goal,
+                    compressor_fn=compressor_fn,
+                    session_creator=lambda: SessionManager.get_instance().create_session(
+                        model_provider=provider,
+                        model_name=model_name,
+                        context_limit=session.context_limit * 2,
+                        parent_session_id=session.id,
+                        goal=session.goal or goal,
+                    ),
+                    longer_context_limit=session.context_limit * 2,
+                )
+                if result["action"] == "migrated":
+                    session = result["new_session"]
+                    for msg in result["messages"]:
+                        session.messages.append(msg)
+                elif result["action"].startswith("compressed"):
+                    session.messages = result["messages"]
 
         adapter_class = cls._adapters.get(provider)
         if not adapter_class:

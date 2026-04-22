@@ -85,14 +85,21 @@ class TestCLIFlags:
 
 
 class TestHandleOllamaRun:
-    @patch("jixing.cli.run_ollama")
-    def test_single_prompt(self, mock_run):
-        mock_run.return_value = MagicMock(
-            success=True,
-            data={"response": "Hello!", "metrics": {"eval_count": 10}},
-            error=None,
-            to_dict=lambda: {"success": True},
-        )
+    @patch("jixing.cli.OllamaAdapter")
+    @patch("jixing.cli.SessionManager")
+    def test_single_prompt(self, mock_manager, mock_adapter_class):
+        mock_session = MagicMock()
+        mock_session.id = "test-session"
+        mock_session.messages = []
+        mock_manager.get_instance.return_value.create_session.return_value = mock_session
+        mock_manager.get_instance.return_value.get_session.return_value = None
+
+        mock_adapter = MagicMock()
+        mock_adapter.run_stream.return_value = iter([
+            ("Hello!", False, {}),
+            ("", True, {"eval_count": 10}),
+        ])
+        mock_adapter_class.return_value = mock_adapter
 
         args = MagicMock()
         args.model = "gemma3:1b"
@@ -100,18 +107,27 @@ class TestHandleOllamaRun:
         args.session = None
         args.interactive = False
         args.json_output = False
+        args.base_url = "http://localhost:11434"
+        args.compress = False
 
         result = handle_ollama_run(args)
         assert result == 0
 
-    @patch("jixing.cli.run_ollama")
-    def test_json_output(self, mock_run, capsys):
-        mock_run.return_value = MagicMock(
-            success=True,
-            data={"response": "Hello!", "metrics": {"eval_count": 10}, "session_id": "test"},
-            error=None,
-            to_dict=lambda: {"success": True, "data": {"response": "Hello!"}},
-        )
+    @patch("jixing.cli.OllamaAdapter")
+    @patch("jixing.cli.SessionManager")
+    def test_json_output(self, mock_manager, mock_adapter_class, capsys):
+        mock_session = MagicMock()
+        mock_session.id = "test-session"
+        mock_session.messages = []
+        mock_manager.get_instance.return_value.create_session.return_value = mock_session
+        mock_manager.get_instance.return_value.get_session.return_value = None
+
+        mock_adapter = MagicMock()
+        mock_adapter.run_stream.return_value = iter([
+            ("Hello!", False, {}),
+            ("", True, {"eval_count": 10}),
+        ])
+        mock_adapter_class.return_value = mock_adapter
 
         args = MagicMock()
         args.model = "gemma3:1b"
@@ -119,17 +135,24 @@ class TestHandleOllamaRun:
         args.session = None
         args.interactive = False
         args.json_output = True
+        args.base_url = "http://localhost:11434"
+        args.compress = False
 
         result = handle_ollama_run(args)
         assert result == 0
 
-    @patch("jixing.cli.run_ollama")
-    def test_error_handling(self, mock_run):
-        mock_run.return_value = MagicMock(
-            success=False,
-            data=None,
-            error="Connection refused",
-        )
+    @patch("jixing.cli.OllamaAdapter")
+    @patch("jixing.cli.SessionManager")
+    def test_error_handling(self, mock_manager, mock_adapter_class):
+        mock_session = MagicMock()
+        mock_session.id = "test-session"
+        mock_session.messages = []
+        mock_manager.get_instance.return_value.create_session.return_value = mock_session
+        mock_manager.get_instance.return_value.get_session.return_value = None
+
+        mock_adapter = MagicMock()
+        mock_adapter.run_stream.side_effect = Exception("Connection refused")
+        mock_adapter_class.return_value = mock_adapter
 
         args = MagicMock()
         args.model = "gemma3:1b"
@@ -137,6 +160,8 @@ class TestHandleOllamaRun:
         args.session = None
         args.interactive = False
         args.json_output = False
+        args.base_url = "http://localhost:11434"
+        args.compress = False
 
         result = handle_ollama_run(args)
         assert result == 1

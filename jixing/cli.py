@@ -15,6 +15,8 @@ from .api import (
     run_ollama,
     search_messages,
 )
+from .core import OllamaAdapter, Session, SessionManager
+from .compressor import SemanticCompressor
 
 
 def _get_version():
@@ -42,15 +44,20 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  jixing ollama run gemma3:1b
+  jixing ollama run gemma3:1b "Say hello"
+  jixing ollama run gemma3:1b -i
+  jixing ollama list
+  jixing ollama show gemma3:1b
+  jixing ollama pull llama3.2
+  jixing ollama delete old-model
   jixing moxing serve gguf_model
-  jixing moxing ollama serve gemma3:1b
   jixing sessions list --provider ollama
   jixing search "previous conversation about"
   jixing stats
+  jixing info
 
 Commands:
-  ollama       Run Ollama model
+  ollama       Ollama model management (run, list, show, pull, delete)
   moxing       Run Moxing model
   sessions     Manage sessions
   search       Search message history
@@ -93,7 +100,7 @@ Commands:
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    ollama_parser = subparsers.add_parser("ollama", help="Run Ollama model")
+    ollama_parser = subparsers.add_parser("ollama", help="Ollama model management")
     ollama_sub = ollama_parser.add_subparsers(dest="subcommand", required=True)
 
     run_parser = ollama_sub.add_parser("run", help="Run a model")
@@ -101,6 +108,25 @@ Commands:
     run_parser.add_argument("prompt", nargs="*", help="Prompt text")
     run_parser.add_argument("--session", help="Session ID to continue")
     run_parser.add_argument("-i", "--interactive", action="store_true", help="Interactive mode")
+    run_parser.add_argument("--base-url", default="http://localhost:11434", help="Ollama base URL")
+    run_parser.add_argument("--compress", action="store_true", help="Enable context compression")
+
+    list_parser = ollama_sub.add_parser("list", help="List available models")
+    list_parser.add_argument("--base-url", default="http://localhost:11434", help="Ollama base URL")
+    list_parser.add_argument("--json", action="store_true", dest="json_output", help="JSON output")
+
+    show_parser = ollama_sub.add_parser("show", help="Show model information")
+    show_parser.add_argument("model", help="Model name")
+    show_parser.add_argument("--base-url", default="http://localhost:11434", help="Ollama base URL")
+    show_parser.add_argument("--json", action="store_true", dest="json_output", help="JSON output")
+
+    pull_parser = ollama_sub.add_parser("pull", help="Pull a model")
+    pull_parser.add_argument("model", help="Model name to pull")
+    pull_parser.add_argument("--base-url", default="http://localhost:11434", help="Ollama base URL")
+
+    delete_parser = ollama_sub.add_parser("delete", help="Delete a model")
+    delete_parser.add_argument("model", help="Model name to delete")
+    delete_parser.add_argument("--base-url", default="http://localhost:11434", help="Ollama base URL")
 
     moxing_parser = subparsers.add_parser("moxing", help="Run Moxing model")
     moxing_sub = moxing_parser.add_subparsers(dest="subcommand", required=True)
@@ -164,47 +190,212 @@ Commands:
 
 def handle_ollama_run(args) -> int:
     prompt = " ".join(args.prompt) if args.prompt else None
+    base_url = getattr(args, "base_url", "http://localhost:11434")
+    use_compress = getattr(args, "compress", False)
+    session_id = getattr(args, "session", None)
+
+    manager = SessionManager.get_instance()
+    session = None
+    if session_id:
+        session = manager.get_session(session_id)
+
+    if not session:
+        session = manager.create_session(
+            model_provider="ollama",
+            model_name=args.model,
+        )
+        session_id = session.id
+
+    adapter = OllamaAdapter(session, base_url=base_url)
+    compressor = SemanticCompressor()
+
+    conversation_history = [m for m in session.messages]
 
     if args.interactive:
-        print("Interactive mode. Type 'exit' to quit.")
+        print(f"Interactive mode with {args.model}. Type 'exit' to quit, 'clear' to clear history.")
+        if use_compress:
+            print("Context compression enabled.")
+        print(f"Session: {session_id[:8]}...")
+        print()
+
         while True:
             try:
-                prompt = input("\nYou: ")
-                if prompt.lower() in ("exit", "quit"):
+                user_input = input("\nYou: ")
+                if user_input.lower() in ("exit", "quit"):
                     break
-                if not prompt.strip():
+                if user_input.lower() == "clear":
+                    conversation_history = []
+                    print("Conversation history cleared.")
+                    continue
+                if not user_input.strip():
                     continue
 
-                result = run_ollama(model=args.model, prompt=prompt, session_id=args.session)
+                messages = conversation_history + [{"role": "user", "content": user_input}]
 
-                if args.json_output:
-                    print(json.dumps(result.to_dict()))
-                else:
-                    if result.success:
-                        print(f"\nAssistant: {result.data['response']}")
-                        print(f"[Tokens: {result.data['metrics'].get('eval_count', 'N/A')}]")
-                    else:
-                        print(f"Error: {result.error}")
+                if use_compress and len(conversation_history) > 4:
+                    compressed = compressor.compress_messages(conversation_history)
+                    if len(compressed) < len(conversation_history):
+                        logger.debug(f"Compressed {len(conversation_history)} -> {len(compressed)} messages")
+                        conversation_history = compressed
 
-                args.session = result.data["session_id"] if result.success else args.session
+                messages_to_send = conversation_history + [{"role": "user", "content": user_input}]
+
+                print("\nAssistant: ", end="", flush=True)
+                full_response = ""
+                try:
+                    for chunk, done, metrics in adapter.run_stream(
+                        prompt=None, history=messages_to_send
+                    ):
+                        if chunk:
+                            print(chunk, end="", flush=True)
+                            full_response += chunk
+                    print()
+                except Exception as e:
+                    print(f"\nError: {e}", file=sys.stderr)
+                    continue
+
+                session.add_message("user", user_input)
+                session.add_message("assistant", full_response)
+                manager._save_session(session)
+
+                conversation_history.append({"role": "user", "content": user_input})
+                conversation_history.append({"role": "assistant", "content": full_response})
+
             except KeyboardInterrupt:
                 print("\nExiting...")
                 break
+
     elif prompt:
-        result = run_ollama(model=args.model, prompt=prompt, session_id=args.session)
-        if args.json_output:
-            print(json.dumps(result.to_dict()))
-        else:
-            if result.success:
-                print(result.data["response"])
-            else:
-                print(f"Error: {result.error}", file=sys.stderr)
-                return 1
+        print("\nAssistant: ", end="", flush=True)
+        full_response = ""
+        try:
+            messages = conversation_history + [{"role": "user", "content": prompt}]
+            for chunk, done, metrics in adapter.run_stream(
+                prompt=None, history=messages
+            ):
+                if chunk:
+                    print(chunk, end="", flush=True)
+                    full_response += chunk
+            print()
+        except Exception as e:
+            print(f"\nError: {e}", file=sys.stderr)
+            return 1
+
+        session.add_message("user", prompt)
+        session.add_message("assistant", full_response)
+        manager._save_session(session)
     else:
         print(
             "Error: Prompt required. Use -i for interactive mode or provide prompt text.",
             file=sys.stderr,
         )
+        return 1
+
+    return 0
+
+
+def handle_ollama_list(args) -> int:
+    base_url = getattr(args, "base_url", "http://localhost:11434")
+    adapter = OllamaAdapter(
+        Session(id="temp", model_provider="ollama", model_name="", created_at="", updated_at="", system_info={}),
+        base_url=base_url,
+    )
+
+    try:
+        models = adapter.list_models()
+    except Exception as e:
+        print(f"Error connecting to Ollama: {e}", file=sys.stderr)
+        return 1
+
+    if getattr(args, "json_output", False):
+        print(json.dumps({"models": models}))
+    else:
+        if not models:
+            print("No models found. Pull a model with: jixing ollama pull <model>")
+        else:
+            print(f"Found {len(models)} models:\n")
+            print(f"{'NAME':<45} {'ID':<15} {'SIZE':<10} {'MODIFIED'}")
+            print("-" * 90)
+            for m in models:
+                name = m.get("name", "")
+                digest = m.get("digest", "")[:12]
+                size = m.get("size", 0)
+                size_str = _format_size(size)
+                modified = m.get("modified_at", "")[:19] if m.get("modified_at") else ""
+                print(f"{name:<45} {digest:<15} {size_str:<10} {modified}")
+
+    return 0
+
+
+def handle_ollama_show(args) -> int:
+    base_url = getattr(args, "base_url", "http://localhost:11434")
+    adapter = OllamaAdapter(
+        Session(id="temp", model_provider="ollama", model_name="", created_at="", updated_at="", system_info={}),
+        base_url=base_url,
+    )
+
+    try:
+        info = adapter.show_model(args.model)
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+
+    if getattr(args, "json_output", False):
+        print(json.dumps(info))
+    else:
+        print(f"Model: {args.model}")
+        print("=" * 40)
+        if "details" in info:
+            details = info["details"]
+            print(f"Format: {details.get('format', 'N/A')}")
+            print(f"Family: {details.get('family', 'N/A')}")
+            print(f"Parameter Size: {details.get('parameter_size', 'N/A')}")
+            print(f"Quantization: {details.get('quantization_level', 'N/A')}")
+        if "modelfile" in info:
+            print(f"\nModelfile:\n{info['modelfile'][:500]}...")
+
+    return 0
+
+
+def handle_ollama_pull(args) -> int:
+    base_url = getattr(args, "base_url", "http://localhost:11434")
+    adapter = OllamaAdapter(
+        Session(id="temp", model_provider="ollama", model_name="", created_at="", updated_at="", system_info={}),
+        base_url=base_url,
+    )
+
+    print(f"Pulling {args.model}...")
+    try:
+        for status in adapter.pull_model(args.model, stream=True):
+            if "status" in status:
+                print(f"  {status['status']}")
+            if "completed" in status and "total" in status:
+                pct = status["completed"] / status["total"] * 100
+                print(f"\r  Downloading: {pct:.1f}%", end="", flush=True)
+        print()
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+
+    return 0
+
+
+def handle_ollama_delete(args) -> int:
+    base_url = getattr(args, "base_url", "http://localhost:11434")
+    adapter = OllamaAdapter(
+        Session(id="temp", model_provider="ollama", model_name="", created_at="", updated_at="", system_info={}),
+        base_url=base_url,
+    )
+
+    try:
+        success = adapter.delete_model(args.model)
+        if success:
+            print(f"Deleted model: {args.model}")
+        else:
+            print(f"Failed to delete model: {args.model}", file=sys.stderr)
+            return 1
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
         return 1
 
     return 0
@@ -279,7 +470,9 @@ def handle_sessions(args) -> int:
                         prov = s["model_provider"]
                         model = s["model_name"]
                         created = s["created_at"][:19]
-                        print(f"  {sid}... | {prov}/{model} | {created}")
+                        msgs = len(s.get("messages", []))
+                        tokens = s.get("total_tokens", 0)
+                        print(f"  {sid}... | {prov}/{model} | {created} | {msgs} msgs | {tokens} tokens")
             else:
                 print(f"Error: {result.error}", file=sys.stderr)
                 return 1
@@ -297,6 +490,10 @@ def handle_sessions(args) -> int:
                 print(f"Created: {s['created_at']}")
                 print(f"Messages: {len(s['messages'])}")
                 print(f"Total tokens: {s['total_tokens']}")
+                if s.get("parent_session_id"):
+                    print(f"Parent session: {s['parent_session_id'][:8]}...")
+                if s.get("goal"):
+                    print(f"Goal: {s['goal']}")
             else:
                 print(f"Error: {result.error}", file=sys.stderr)
                 return 1
@@ -424,13 +621,34 @@ def handle_web(args) -> int:
     return 0
 
 
+def _format_size(size_bytes: int) -> str:
+    """Format bytes to human readable size."""
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    elif size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.0f} KB"
+    elif size_bytes < 1024 * 1024 * 1024:
+        return f"{size_bytes / (1024 * 1024):.0f} MB"
+    else:
+        return f"{size_bytes / (1024 * 1024 * 1024):.1f} GB"
+
+
 def main():
     args = parse_args()
     setup_logging(args.verbose, args.quiet)
 
     try:
-        if args.command == "ollama" and args.subcommand == "run":
-            return handle_ollama_run(args)
+        if args.command == "ollama":
+            if args.subcommand == "run":
+                return handle_ollama_run(args)
+            elif args.subcommand == "list":
+                return handle_ollama_list(args)
+            elif args.subcommand == "show":
+                return handle_ollama_show(args)
+            elif args.subcommand == "pull":
+                return handle_ollama_pull(args)
+            elif args.subcommand == "delete":
+                return handle_ollama_delete(args)
 
         elif args.command == "moxing":
             if args.subcommand == "serve":

@@ -17,6 +17,122 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
+class ConversationArchiver:
+    """JSONL-based conversation history storage for full session archiving."""
+
+    def __init__(self, archive_dir: Optional[str | Path] = None):
+        self.archive_dir = Path(archive_dir) if archive_dir else Path.home() / ".jixing" / "conversations"
+        self.archive_dir.mkdir(parents=True, exist_ok=True)
+
+    def archive_session(
+        self,
+        session_id: str,
+        messages: list[dict],
+        metadata: Optional[dict] = None,
+    ) -> Path:
+        """Archive a full session to JSONL."""
+        jsonl_path = self.archive_dir / f"{session_id}.jsonl"
+
+        with open(jsonl_path, "w", encoding="utf-8") as f:
+            header = {
+                "type": "session_header",
+                "session_id": session_id,
+                "archived_at": datetime.now(timezone.utc).isoformat(),
+                "message_count": len(messages),
+                "metadata": metadata or {},
+            }
+            f.write(json.dumps(header, ensure_ascii=False) + "\n")
+
+            for i, msg in enumerate(messages):
+                record = {
+                    "type": "message",
+                    "index": i,
+                    "session_id": session_id,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    **msg,
+                }
+                f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+        logger.info(f"Archived session {session_id} ({len(messages)} messages) to {jsonl_path}")
+        return jsonl_path
+
+    def append_message(
+        self,
+        session_id: str,
+        message: dict,
+        metadata: Optional[dict] = None,
+    ) -> Path:
+        """Append a single message to an existing session archive."""
+        jsonl_path = self.archive_dir / f"{session_id}.jsonl"
+
+        with open(jsonl_path, "a", encoding="utf-8") as f:
+            record = {
+                "type": "message",
+                "session_id": session_id,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "metadata": metadata or {},
+                **message,
+            }
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+        return jsonl_path
+
+    def load_session(self, session_id: str) -> Optional[dict]:
+        """Load a full session from JSONL archive."""
+        jsonl_path = self.archive_dir / f"{session_id}.jsonl"
+        if not jsonl_path.exists():
+            return None
+
+        header = None
+        messages = []
+
+        with open(jsonl_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                record = json.loads(line)
+                if record.get("type") == "session_header":
+                    header = record
+                elif record.get("type") == "message":
+                    messages.append({
+                        "role": record.get("role", ""),
+                        "content": record.get("content", ""),
+                        "timestamp": record.get("timestamp", ""),
+                        "metrics": record.get("metrics"),
+                    })
+
+        return {
+            "session_id": session_id,
+            "header": header,
+            "messages": messages,
+            "message_count": len(messages),
+        }
+
+    def list_archived_sessions(self) -> list[dict]:
+        """List all archived sessions."""
+        sessions = []
+        for jsonl_path in self.archive_dir.glob("*.jsonl"):
+            session_id = jsonl_path.stem
+            session_data = self.load_session(session_id)
+            if session_data:
+                sessions.append({
+                    "session_id": session_id,
+                    "message_count": session_data["message_count"],
+                    "archived_at": session_data["header"].get("archived_at") if session_data["header"] else None,
+                    "file_size": jsonl_path.stat().st_size,
+                })
+        return sorted(sessions, key=lambda x: x.get("archived_at") or "", reverse=True)
+
+    def delete_archive(self, session_id: str) -> bool:
+        """Delete a session archive."""
+        jsonl_path = self.archive_dir / f"{session_id}.jsonl"
+        if jsonl_path.exists():
+            jsonl_path.unlink()
+            return True
+        return False
+
+
 @dataclass
 class TimestampedMemory:
     memory_id: str
