@@ -199,6 +199,9 @@ Commands:
     run_task_parser.add_argument("--quality", type=float, default=0.8, help="Quality threshold (0.0-1.0)")
     run_task_parser.add_argument("--context-limit", type=int, default=128000, help="Context window limit")
     run_task_parser.add_argument("--base-url", default="http://localhost:11434", help="Ollama base URL")
+    run_task_parser.add_argument("--timeout", type=int, default=600, help="Per-round timeout in seconds (default: 600)")
+    run_task_parser.add_argument("--max-retries", type=int, default=3, help="Max retries per round on timeout (default: 3)")
+    run_task_parser.add_argument("--work-dir", default=None, help="Working directory for generated files (default: current dir)")
 
     task_status_parser = task_sub.add_parser("status", help="Get task status/checkpoints")
     task_status_parser.add_argument("task_id", help="Task ID")
@@ -650,6 +653,9 @@ def handle_task_run(args) -> int:
     if args.max_rounds:
         print(f"  Max rounds: {args.max_rounds}")
     print(f"  Quality threshold: {args.quality}")
+    print(f"  Timeout per round: {args.timeout}s")
+    print(f"  Max retries: {args.max_retries}")
+    print(f"  Work directory: {args.work_dir or 'current dir'}")
     print()
 
     def progress_callback(progress):
@@ -666,6 +672,9 @@ def handle_task_run(args) -> int:
         quality_threshold=args.quality,
         context_limit=args.context_limit,
         base_url=args.base_url,
+        timeout=args.timeout,
+        max_retries=args.max_retries,
+        work_dir=args.work_dir,
     )
 
     if args.json_output:
@@ -681,6 +690,11 @@ def handle_task_run(args) -> int:
             print(f"  Time: {data['elapsed_seconds']:.1f}s")
             print(f"  Quality: {data['quality_score']:.2f}")
             print(f"  Stop reason: {data['stop_reason']}")
+            files = data.get("files_written", [])
+            if files:
+                print(f"\nFiles written ({len(files)}):")
+                for f in files:
+                    print(f"  - {f}")
             print(f"\nFinal output:")
             print("-" * 40)
             print(data["final_output"])

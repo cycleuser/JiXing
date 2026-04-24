@@ -158,6 +158,7 @@ class TaskResult:
     quality_score: float
     stop_reason: str
     checkpoints: list[dict] = field(default_factory=list)
+    files_written: list[str] = field(default_factory=list)
     error: str = ""
 
     def to_dict(self) -> dict:
@@ -185,6 +186,23 @@ PROGRESS SO FAR:
 
 CURRENT ROUND: {round_number}
 PREVIOUS OUTPUT: {previous_output}
+
+IMPORTANT: When writing code, ALWAYS use markdown code blocks with the file path as the language tag.
+Format: ```path/to/file.ext
+<code here>
+```
+
+Example:
+```python
+import pygame
+# player tank code
+```
+
+For shell commands, use:
+```bash
+mkdir -p tank_game
+pip install pygame
+```
 
 Continue working towards the goal. If the goal is complete, output exactly:
 [COMPLETE]
@@ -218,6 +236,8 @@ Respond with ONLY a number between 0.0 and 1.0, nothing else."""
         compression_threshold: float = 0.8,
         checkpoint_dir: Optional[str | Path] = None,
         progress_callback: Optional[Callable[[TaskProgress], None]] = None,
+        max_retries: int = 3,
+        work_dir: Optional[str | Path] = None,
         **model_kwargs,
     ):
         self.model_name = model_name
@@ -226,6 +246,8 @@ Respond with ONLY a number between 0.0 and 1.0, nothing else."""
         self.max_duration = parse_duration(max_duration)
         self.max_rounds = max_rounds
         self.quality_threshold = quality_threshold
+        self.max_retries = max_retries
+        self.work_dir = Path(work_dir).resolve() if work_dir else Path.cwd()
         self.model_kwargs = model_kwargs
 
         self.task_id = str(uuid.uuid4())[:8]
@@ -236,6 +258,7 @@ Respond with ONLY a number between 0.0 and 1.0, nothing else."""
         self.migrations_performed = 0
         self.session_ids: list[str] = []
         self.checkpoints: list[dict] = []
+        self._files_written: list[str] = []
 
         self.manager = SessionManager.get_instance()
         self.session = self.manager.create_session(
@@ -268,6 +291,145 @@ Respond with ONLY a number between 0.0 and 1.0, nothing else."""
         self.progress_callback = progress_callback
         self._running = False
         self._last_output = ""
+
+        self._check_model_capability()
+
+    def _check_model_capability(self):
+        """Check model size and warn if too small for complex tasks."""
+        try:
+            model_info = self.adapter.show_model(self.model_name)
+            details = model_info.get("model_info", {})
+            param_count = details.get("general.parameter_count", "")
+
+            if param_count:
+                size_b = self._parse_param_count(param_count)
+                if size_b < 2:
+                    logger.warning(
+                        f"Model {self.model_name} has only {param_count} parameters. "
+                        f"Models <2B may struggle with complex tasks like code generation. "
+                        f"Consider using a larger model for better results."
+                    )
+                elif size_b < 7:
+                    logger.info(
+                        f"Model {self.model_name} ({param_count}) is suitable for simple tasks. "
+                        f"Complex code generation may require multiple rounds."
+                    )
+        except Exception as e:
+            logger.debug(f"Could not check model capability: {e}")
+
+    def _parse_param_count(self, param_str: str) -> float:
+        """Parse parameter count string like '820M', '1.5B', '7B' to billions."""
+        param_str = param_str.upper().strip()
+        if param_str.endswith("B"):
+            return float(param_str[:-1])
+        elif param_str.endswith("M"):
+            return float(param_str[:-1]) / 1000
+        elif param_str.endswith("T"):
+            return float(param_str[:-1]) * 1000
+        return float(param_str)
+
+    def _extract_and_write_files(self, text: str) -> list[str]:
+        """Extract code blocks from text and write them to files.
+
+        Supports formats:
+        - ```path/to/file.ext\\n<code>\\n```
+        - ```ext\\n<code>\\n``` (creates file with extension)
+        - ```bash\\n<command>\\n``` (logs but doesn't write)
+
+        Returns list of written file paths.
+        """
+        written_files = []
+        pattern = re.compile(r"```(\S*?)\s*\n(.*?)```", re.DOTALL)
+
+        for match in pattern.finditer(text):
+            lang_or_path = match.group(1).strip().lower()
+            code = match.group(2).strip()
+
+            if not code:
+                continue
+
+            if lang_or_path in ("bash", "sh", "shell", "zsh"):
+                logger.info(f"Shell command detected (not executing): {code[:100]}...")
+                continue
+
+            file_path = self._resolve_file_path(lang_or_path, code)
+            if file_path:
+                self._write_file(file_path, code)
+                written_files.append(str(file_path))
+                self._files_written.append(str(file_path))
+
+        if written_files:
+            logger.info(f"Wrote {len(written_files)} file(s): {', '.join(written_files)}")
+
+        return written_files
+
+    def _resolve_file_path(self, lang_or_path: str, code: str) -> Optional[Path]:
+        """Resolve a file path from language tag or code content."""
+        if "/" in lang_or_path or "\\" in lang_or_path or "." in lang_or_path:
+            return self.work_dir / lang_or_path
+
+        ext_map = {
+            "python": ".py", "py": ".py",
+            "javascript": ".js", "js": ".js", "typescript": ".ts", "ts": ".ts",
+            "html": ".html", "css": ".css",
+            "json": ".json", "yaml": ".yaml", "yml": ".yml",
+            "markdown": ".md", "md": ".md",
+            "rust": ".rs", "go": ".go", "java": ".java",
+            "cpp": ".cpp", "c": ".c", "h": ".h", "hpp": ".hpp",
+            "ruby": ".rb", "php": ".php", "swift": ".swift",
+            "kotlin": ".kt", "scala": ".scala",
+            "sql": ".sql", "xml": ".xml",
+            "toml": ".toml", "ini": ".ini", "cfg": ".cfg",
+            "txt": ".txt", "text": ".txt",
+        }
+        ext = ext_map.get(lang_or_path, "")
+        if not ext:
+            return None
+
+        if ext == ".py" and self._is_main_script(code):
+            return self.work_dir / "main.py"
+
+        name = self._infer_name_from_code(code, ext)
+        return self.work_dir / f"{name}{ext}"
+
+    def _is_main_script(self, code: str) -> bool:
+        """Check if code looks like a complete runnable main script."""
+        indicators = [
+            r"if\s+__name__\s*==\s*['\"]__main__['\"]",
+            r"while\s+\w+:",
+            r"pygame\.init\(\)",
+            r"app\s*=\s*\w+\(",
+            r"def\s+main\s*\(",
+        ]
+        matches = sum(1 for p in indicators if re.search(p, code))
+        return matches >= 2
+
+    def _infer_name_from_code(self, code: str, ext: str) -> str:
+        """Infer a filename from code content."""
+        patterns = [
+            (r"class\s+(\w+)[\(:]", 1),
+            (r"(?:def|function)\s+(\w+)", 1),
+            (r"(?:const|let|var)\s+(\w+)\s*=", 1),
+        ]
+        for pattern, group in patterns:
+            match = re.search(pattern, code)
+            if match:
+                name = match.group(group)
+                if name and name[0].isupper() and ext == ".py":
+                    name = self._camel_to_snake(name)
+                return name
+        return "main"
+
+    def _camel_to_snake(self, name: str) -> str:
+        s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
+        return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
+
+    def _write_file(self, file_path: Path, content: str):
+        """Write content to a file, creating directories as needed."""
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        logger.info(f"  -> {file_path} ({len(content)} bytes)")
 
     def _get_progress_summary(self) -> str:
         """Generate a summary of progress so far."""
@@ -493,51 +655,80 @@ Respond with ONLY a number between 0.0 and 1.0, nothing else."""
 
                 prompt = self._build_prompt(self._last_output)
 
-                try:
-                    response, metrics, _ = self.adapter.run(
-                        prompt,
-                        timeout=self.model_kwargs.get("timeout", 300),
-                    )
+                timeout = self.model_kwargs.get("timeout", 600)
+                idle_timeout = self.model_kwargs.get("idle_timeout", max(120, timeout // 5))
+                response = None
+                metrics = {}
+                round_failed = True
 
-                    tokens_this_round = metrics.get("eval_count", 0)
-                    self.total_tokens_used += tokens_this_round
-                    self._last_output = response
-                    full_output_parts.append(response)
-                    self.rounds_completed += 1
-
-                    self.session.add_message("user", prompt)
-                    self.session.add_message("assistant", response, metrics=metrics)
-                    self.manager._save_session(self.session)
-
-                    quality = self._evaluate_quality(response)
-                    self._last_quality = quality
-
-                    logger.info(
-                        f"Round {self.rounds_completed}: "
-                        f"tokens={tokens_this_round}, "
-                        f"quality={quality:.2f}, "
-                        f"total_tokens={self.total_tokens_used}"
-                    )
-
-                    self._save_checkpoint(response, quality)
-                    self._emit_progress()
-
-                    if "[COMPLETE]" in response or quality >= self.quality_threshold:
-                        if quality >= self.quality_threshold:
-                            stop_reason = f"Quality threshold reached ({quality:.2f} >= {self.quality_threshold})"
-                        else:
-                            stop_reason = "Task marked complete by model"
-                        logger.info(f"Stopping: {stop_reason}")
+                for attempt in range(self.max_retries + 1):
+                    try:
+                        response, metrics, _ = self.adapter.run_with_idle_timeout(
+                            prompt,
+                            timeout=timeout,
+                            idle_timeout=idle_timeout,
+                        )
+                        round_failed = False
                         break
+                    except Exception as e:
+                        is_timeout = "timeout" in str(e).lower() or "timed out" in str(e).lower() or "stuck" in str(e).lower()
+                        if attempt < self.max_retries:
+                            wait_time = min(2 ** attempt * 5, 60)
+                            logger.warning(
+                                f"Round {self.rounds_completed + 1} attempt {attempt + 1} failed "
+                                f"({'timeout' if is_timeout else 'error'}): {e}. "
+                                f"Retrying in {wait_time}s (attempt {attempt + 2}/{self.max_retries + 1})..."
+                            )
+                            time.sleep(wait_time)
+                            if is_timeout:
+                                timeout = int(timeout * 1.5)
+                                idle_timeout = int(idle_timeout * 1.5)
+                                logger.info(f"Increased timeout to {timeout}s, idle_timeout to {idle_timeout}s for next attempt")
+                        else:
+                            logger.error(
+                                f"Round {self.rounds_completed + 1} failed after {self.max_retries + 1} attempts: {e}"
+                            )
 
-                except Exception as e:
-                    logger.error(f"Round {self.rounds_completed + 1} failed: {e}")
-                    self._last_output = f"Error in round {self.rounds_completed + 1}: {e}"
+                if round_failed:
+                    self._last_output = f"Error in round {self.rounds_completed + 1}: all {self.max_retries + 1} attempts failed"
                     full_output_parts.append(self._last_output)
                     self.rounds_completed += 1
                     self._emit_progress()
+                    time.sleep(5)
+                    continue
 
-                    time.sleep(1)
+                tokens_this_round = metrics.get("eval_count", 0)
+                self.total_tokens_used += tokens_this_round
+                self._last_output = response
+                full_output_parts.append(response)
+                self.rounds_completed += 1
+
+                written = self._extract_and_write_files(response)
+
+                self.session.add_message("user", prompt)
+                self.session.add_message("assistant", response, metrics=metrics)
+                self.manager._save_session(self.session)
+
+                quality = self._evaluate_quality(response)
+                self._last_quality = quality
+
+                logger.info(
+                    f"Round {self.rounds_completed}: "
+                    f"tokens={tokens_this_round}, "
+                    f"quality={quality:.2f}, "
+                    f"total_tokens={self.total_tokens_used}"
+                )
+
+                self._save_checkpoint(response, quality)
+                self._emit_progress()
+
+                if "[COMPLETE]" in response or quality >= self.quality_threshold:
+                    if quality >= self.quality_threshold:
+                        stop_reason = f"Quality threshold reached ({quality:.2f} >= {self.quality_threshold})"
+                    else:
+                        stop_reason = "Task marked complete by model"
+                    logger.info(f"Stopping: {stop_reason}")
+                    break
 
         except KeyboardInterrupt:
             stop_reason = "Interrupted by user"
@@ -562,6 +753,7 @@ Respond with ONLY a number between 0.0 and 1.0, nothing else."""
             quality_score=self._last_quality,
             stop_reason=stop_reason or "Unknown",
             checkpoints=self.checkpoints,
+            files_written=self._files_written,
         )
 
         result_path = self.checkpoint_dir / f"{self.task_id}_result.json"

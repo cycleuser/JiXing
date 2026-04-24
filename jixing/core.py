@@ -462,6 +462,82 @@ class OllamaAdapter(ModelAdapter):
                 except json.JSONDecodeError:
                     continue
 
+    def run_with_idle_timeout(
+        self,
+        prompt: str,
+        timeout: int = 600,
+        idle_timeout: int = 120,
+        **kwargs,
+    ) -> tuple[str, dict[str, Any], dict[str, Any]]:
+        """Run with streaming and idle timeout detection.
+
+        Uses /api/generate with streaming for maximum compatibility.
+        Detects when the model appears stuck (no output for idle_timeout seconds).
+
+        Args:
+            prompt: The prompt to send
+            timeout: Total timeout for the request
+            idle_timeout: Max seconds without any output before considering stuck
+
+        Returns:
+            Tuple of (response_text, metrics, usage)
+        """
+        url = f"{self.base_url}/api/generate"
+        payload = {
+            "model": self.session.model_name,
+            "prompt": prompt,
+            "stream": True,
+        }
+        payload.update(kwargs)
+
+        start_time = time.time()
+        last_activity = start_time
+        full_response = ""
+        metrics = {}
+
+        try:
+            response = requests.post(url, json=payload, stream=True, timeout=timeout)
+            response.raise_for_status()
+
+            for line in response.iter_lines():
+                if line:
+                    try:
+                        data = json.loads(line)
+                        chunk = data.get("response", "")
+                        if chunk:
+                            full_response += chunk
+                            last_activity = time.time()
+                        if data.get("done", False):
+                            metrics = {
+                                "eval_count": data.get("eval_count", 0),
+                                "eval_duration": data.get("eval_duration", 0),
+                                "load_duration": data.get("load_duration", 0),
+                                "prompt_eval_count": data.get("prompt_eval_count", 0),
+                                "prompt_eval_duration": data.get("prompt_eval_duration", 0),
+                                "total_duration": data.get("total_duration", 0),
+                            }
+                            break
+                    except json.JSONDecodeError:
+                        continue
+
+                if time.time() - last_activity > idle_timeout and full_response:
+                    raise TimeoutError(
+                        f"Model appears stuck (no output for {idle_timeout}s). "
+                        f"Generated {len(full_response)} chars before stalling."
+                    )
+
+                if time.time() - start_time > timeout:
+                    raise TimeoutError(f"Total timeout of {timeout}s exceeded")
+
+        except requests.exceptions.Timeout:
+            raise TimeoutError(f"Request timeout after {timeout}s")
+
+        if not full_response:
+            raise ValueError("Model returned empty response")
+
+        metrics["wall_time_ms"] = int((time.time() - start_time) * 1000)
+        return full_response, metrics, {}
+
     def list_models(self) -> list[dict]:
         """List available models from Ollama."""
         url = f"{self.base_url}/api/tags"
