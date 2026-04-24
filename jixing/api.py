@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from importlib import import_module
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Union
 
 from .core import ModelRunner, SessionManager, SystemInfo
 from .db import Database
@@ -558,5 +558,126 @@ def auto_handle_overflow(
             },
             metadata={"version": _get_version()},
         )
+    except Exception as e:
+        return ToolResult(success=False, error=str(e), metadata={"version": _get_version()})
+
+
+def run_long_running_task(
+    *,
+    model: str,
+    goal: str,
+    max_duration: Optional[Union[str, int, float]] = None,
+    max_rounds: Optional[int] = None,
+    quality_threshold: float = 0.8,
+    context_limit: int = 128000,
+    base_url: str = "http://localhost:11434",
+    **kwargs,
+) -> ToolResult:
+    try:
+        from .long_running_executor import LongRunningTaskExecutor
+
+        executor = LongRunningTaskExecutor(
+            model_name=model,
+            goal=goal,
+            base_url=base_url,
+            max_duration=max_duration,
+            max_rounds=max_rounds,
+            quality_threshold=quality_threshold,
+            context_limit=context_limit,
+            **kwargs,
+        )
+
+        result = executor.execute()
+
+        return ToolResult(
+            success=result.success,
+            data=result.to_dict(),
+            metadata={"version": _get_version()},
+        )
+
+    except Exception as e:
+        return ToolResult(success=False, error=str(e), metadata={"version": _get_version()})
+
+
+def get_task_checkpoints(
+    *,
+    task_id: str,
+    checkpoint_dir: Optional[str] = None,
+) -> ToolResult:
+    try:
+        from pathlib import Path
+
+        cp_dir = (
+            Path(checkpoint_dir) if checkpoint_dir
+            else Path.home() / ".jixing" / "task_checkpoints"
+        )
+
+        if not cp_dir.exists():
+            return ToolResult(
+                success=False,
+                error=f"Checkpoint directory not found: {cp_dir}",
+                metadata={"version": _get_version()},
+            )
+
+        checkpoints = []
+        for cp_file in sorted(cp_dir.glob(f"{task_id}_round_*.json")):
+            with open(cp_file, "r", encoding="utf-8") as f:
+                checkpoints.append(json.load(f))
+
+        result_file = cp_dir / f"{task_id}_result.json"
+        result_data = None
+        if result_file.exists():
+            with open(result_file, "r", encoding="utf-8") as f:
+                result_data = json.load(f)
+
+        return ToolResult(
+            success=True,
+            data={
+                "task_id": task_id,
+                "checkpoints": checkpoints,
+                "result": result_data,
+                "checkpoint_count": len(checkpoints),
+            },
+            metadata={"version": _get_version()},
+        )
+
+    except Exception as e:
+        return ToolResult(success=False, error=str(e), metadata={"version": _get_version()})
+
+
+def list_task_results(
+    *,
+    checkpoint_dir: Optional[str] = None,
+) -> ToolResult:
+    try:
+        from pathlib import Path
+
+        cp_dir = (
+            Path(checkpoint_dir) if checkpoint_dir
+            else Path.home() / ".jixing" / "task_checkpoints"
+        )
+
+        if not cp_dir.exists():
+            return ToolResult(
+                success=True,
+                data={"tasks": []},
+                metadata={"version": _get_version()},
+            )
+
+        tasks = {}
+        for result_file in cp_dir.glob("*_result.json"):
+            task_id = result_file.stem.replace("_result", "")
+            with open(result_file, "r", encoding="utf-8") as f:
+                tasks[task_id] = json.load(f)
+
+        return ToolResult(
+            success=True,
+            data={
+                "tasks": tasks,
+                "task_count": len(tasks),
+            },
+            metadata={"version": _get_version()},
+        )
+
     except Exception as e:
         return ToolResult(success=False, error=str(e), metadata={"version": _get_version()})

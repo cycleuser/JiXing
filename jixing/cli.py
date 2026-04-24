@@ -9,8 +9,11 @@ from .api import (
     get_session,
     get_stats,
     get_system_info,
+    get_task_checkpoints,
+    list_task_results,
     merge_sessions,
     query_sessions,
+    run_long_running_task,
     run_moxing,
     run_ollama,
     search_messages,
@@ -184,6 +187,23 @@ Commands:
     web_parser = subparsers.add_parser("web", help="Start web interface")
     web_parser.add_argument("--host", default="127.0.0.1", help="Host to bind")
     web_parser.add_argument("--port", type=int, default=5000, help="Port to bind")
+
+    task_parser = subparsers.add_parser("task", help="Long-running task execution")
+    task_sub = task_parser.add_subparsers(dest="subcommand", required=True)
+
+    run_task_parser = task_sub.add_parser("run", help="Run a long-running task")
+    run_task_parser.add_argument("model", help="Model name (e.g., gemma3:1b)")
+    run_task_parser.add_argument("goal", help="Task goal/description")
+    run_task_parser.add_argument("--max-duration", help="Max duration (e.g., '5m', '2h', '1d', '1w', '1M', or seconds)")
+    run_task_parser.add_argument("--max-rounds", type=int, help="Max number of rounds")
+    run_task_parser.add_argument("--quality", type=float, default=0.8, help="Quality threshold (0.0-1.0)")
+    run_task_parser.add_argument("--context-limit", type=int, default=128000, help="Context window limit")
+    run_task_parser.add_argument("--base-url", default="http://localhost:11434", help="Ollama base URL")
+
+    task_status_parser = task_sub.add_parser("status", help="Get task status/checkpoints")
+    task_status_parser.add_argument("task_id", help="Task ID")
+
+    task_list_parser = task_sub.add_parser("list", help="List all task results")
 
     return parser.parse_args()
 
@@ -613,11 +633,113 @@ def handle_info(args) -> int:
 
 
 def handle_web(args) -> int:
-    from .web import create_app
+    from .web import createApp
 
-    app = create_app()
+    app = createApp()
     print(f"Starting web interface at http://{args.host}:{args.port}")
     app.run(host=args.host, port=args.port)
+    return 0
+
+
+def handle_task_run(args) -> int:
+    print(f"Starting long-running task:")
+    print(f"  Model: {args.model}")
+    print(f"  Goal: {args.goal}")
+    if args.max_duration:
+        print(f"  Max duration: {args.max_duration}s")
+    if args.max_rounds:
+        print(f"  Max rounds: {args.max_rounds}")
+    print(f"  Quality threshold: {args.quality}")
+    print()
+
+    def progress_callback(progress):
+        elapsed = progress["elapsed_seconds"] if isinstance(progress, dict) else progress.elapsed_seconds
+        rounds = progress["rounds_completed"] if isinstance(progress, dict) else progress.rounds_completed
+        quality = progress["quality_score"] if isinstance(progress, dict) else progress.quality_score
+        print(f"\r  Round {rounds} | {elapsed:.0f}s | quality: {quality:.2f}", end="", flush=True)
+
+    result = run_long_running_task(
+        model=args.model,
+        goal=args.goal,
+        max_duration=args.max_duration,
+        max_rounds=args.max_rounds,
+        quality_threshold=args.quality,
+        context_limit=args.context_limit,
+        base_url=args.base_url,
+    )
+
+    if args.json_output:
+        print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+    else:
+        print()
+        if result.success:
+            print(f"\nTask completed successfully!")
+            data = result.data
+            print(f"  Task ID: {data['task_id']}")
+            print(f"  Rounds: {data['rounds_completed']}")
+            print(f"  Tokens: {data['total_tokens_used']}")
+            print(f"  Time: {data['elapsed_seconds']:.1f}s")
+            print(f"  Quality: {data['quality_score']:.2f}")
+            print(f"  Stop reason: {data['stop_reason']}")
+            print(f"\nFinal output:")
+            print("-" * 40)
+            print(data["final_output"])
+        else:
+            print(f"\nTask failed: {result.error}")
+            return 1
+
+    return 0
+
+
+def handle_task_status(args) -> int:
+    result = get_task_checkpoints(task_id=args.task_id)
+
+    if args.json_output:
+        print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+    else:
+        if result.success:
+            data = result.data
+            print(f"Task: {data['task_id']}")
+            print(f"Checkpoints: {data['checkpoint_count']}")
+            if data.get("result"):
+                r = data["result"]
+                print(f"Status: {'completed' if r.get('success') else 'failed'}")
+                print(f"Rounds: {r.get('rounds_completed', 0)}")
+                print(f"Quality: {r.get('quality_score', 0):.2f}")
+                print(f"Stop reason: {r.get('stop_reason', 'N/A')}")
+            if data["checkpoints"]:
+                print("\nCheckpoints:")
+                for cp in data["checkpoints"]:
+                    print(f"  Round {cp.get('round', 0)}: quality={cp.get('quality_score', 0):.2f}")
+        else:
+            print(f"Error: {result.error}", file=sys.stderr)
+            return 1
+
+    return 0
+
+
+def handle_task_list(args) -> int:
+    result = list_task_results()
+
+    if args.json_output:
+        print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+    else:
+        if result.success:
+            data = result.data
+            if not data["tasks"]:
+                print("No task results found.")
+            else:
+                print(f"Found {data['task_count']} tasks:\n")
+                for task_id, task in data["tasks"].items():
+                    status = "OK" if task.get("success") else "FAIL"
+                    rounds = task.get("rounds_completed", 0)
+                    quality = task.get("quality_score", 0)
+                    time_s = task.get("elapsed_seconds", 0)
+                    print(f"  {task_id} [{status}] rounds={rounds} quality={quality:.2f} time={time_s:.0f}s")
+        else:
+            print(f"Error: {result.error}", file=sys.stderr)
+            return 1
+
     return 0
 
 
@@ -674,6 +796,14 @@ def main():
 
         elif args.command == "web":
             return handle_web(args)
+
+        elif args.command == "task":
+            if args.subcommand == "run":
+                return handle_task_run(args)
+            elif args.subcommand == "status":
+                return handle_task_status(args)
+            elif args.subcommand == "list":
+                return handle_task_list(args)
 
         else:
             print(f"Unknown command: {args.command}", file=sys.stderr)
