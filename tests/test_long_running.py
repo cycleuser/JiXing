@@ -326,3 +326,167 @@ class TestLongRunningTaskExecutor:
     def test_from_checkpoint_missing_file(self):
         with pytest.raises(FileNotFoundError):
             LongRunningTaskExecutor.from_checkpoint("/nonexistent/path.json")
+
+
+class TestFileExtraction:
+    """Test code extraction and file writing logic."""
+
+    @pytest.fixture
+    def mock_session_manager(self):
+        with patch("jixing.long_running_executor.SessionManager") as mock:
+            manager = MagicMock()
+            session = MagicMock()
+            session.id = "test-session-id"
+            session.model_name = "test-model"
+            session.goal = "test goal"
+            session.context_limit = 128000
+            session.messages = []
+            manager.create_session.return_value = session
+            manager.get_instance.return_value = manager
+            mock.get_instance.return_value = manager
+            yield mock, manager, session
+
+    @pytest.fixture
+    def mock_ollama_adapter(self):
+        with patch("jixing.long_running_executor.OllamaAdapter") as mock:
+            adapter = MagicMock()
+            adapter.run.return_value = ("test response", {"eval_count": 100}, {})
+            adapter.show_model.return_value = {"model_info": {"general.parameter_count": "1B"}}
+            mock.return_value = adapter
+            yield mock, adapter
+
+    def test_extract_python_code_block(self, mock_session_manager, mock_ollama_adapter, tmp_path):
+        """Test extracting code from ```python block."""
+        _, manager, session = mock_session_manager
+        _, adapter = mock_ollama_adapter
+
+        executor = LongRunningTaskExecutor(
+            model_name="test-model",
+            goal="test goal",
+            max_rounds=1,
+            work_dir=tmp_path,
+        )
+
+        text = """Here's the code:
+```python
+import pygame
+pygame.init()
+while running:
+    pass
+```
+"""
+        files = executor._extract_and_write_files(text)
+        assert len(files) == 1
+        assert "tank.py" in files[0] or "main.py" in files[0]
+
+    def test_extract_code_with_file_path(self, mock_session_manager, mock_ollama_adapter, tmp_path):
+        """Test extracting code from ```path/to/file.py block."""
+        _, manager, session = mock_session_manager
+        _, adapter = mock_ollama_adapter
+
+        executor = LongRunningTaskExecutor(
+            model_name="test-model",
+            goal="test goal",
+            max_rounds=1,
+            work_dir=tmp_path,
+        )
+
+        text = """Complete code:
+```tank_game/main.py
+import pygame
+pygame.init()
+if __name__ == "__main__":
+    main()
+```
+"""
+        files = executor._extract_and_write_files(text)
+        assert len(files) == 1
+        assert "tank_game/main.py" in files[0]
+        assert (tmp_path / "tank_game" / "main.py").exists()
+
+    def test_extract_multiple_files(self, mock_session_manager, mock_ollama_adapter, tmp_path):
+        """Test extracting multiple code blocks."""
+        _, manager, session = mock_session_manager
+        _, adapter = mock_ollama_adapter
+
+        executor = LongRunningTaskExecutor(
+            model_name="test-model",
+            goal="test goal",
+            max_rounds=1,
+            work_dir=tmp_path,
+        )
+
+        text = """Main file:
+```game/main.py
+import pygame
+pygame.init()
+```
+
+Readme:
+```game/README.md
+# Game
+```
+"""
+        files = executor._extract_and_write_files(text)
+        assert len(files) == 2
+
+    def test_skip_bash_blocks(self, mock_session_manager, mock_ollama_adapter, tmp_path):
+        """Test that bash blocks are not written as files."""
+        _, manager, session = mock_session_manager
+        _, adapter = mock_ollama_adapter
+
+        executor = LongRunningTaskExecutor(
+            model_name="test-model",
+            goal="test goal",
+            max_rounds=1,
+            work_dir=tmp_path,
+        )
+
+        text = """Install command:
+```bash
+pip install pygame
+```
+
+Code:
+```main.py
+import pygame
+```
+"""
+        files = executor._extract_and_write_files(text)
+        assert len(files) == 1
+        assert "main.py" in files[0]
+
+    def test_is_main_script(self, mock_session_manager, mock_ollama_adapter, tmp_path):
+        """Test main script detection."""
+        _, manager, session = mock_session_manager
+        _, adapter = mock_ollama_adapter
+
+        executor = LongRunningTaskExecutor(
+            model_name="test-model",
+            goal="test goal",
+            max_rounds=1,
+            work_dir=tmp_path,
+        )
+
+        # Should be main script (has pygame.init and while loop)
+        code1 = """import pygame
+pygame.init()
+while running:
+    pass
+"""
+        assert executor._is_main_script(code1) is True
+
+        # Should be main script (has __name__ check)
+        code2 = """def main():
+    pass
+
+if __name__ == "__main__":
+    main()
+"""
+        assert executor._is_main_script(code2) is True
+
+        # Should NOT be main script (only one indicator)
+        code3 = """import pygame
+print("hello")
+"""
+        assert executor._is_main_script(code3) is False

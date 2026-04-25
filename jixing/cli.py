@@ -192,10 +192,11 @@ Commands:
     task_sub = task_parser.add_subparsers(dest="subcommand", required=True)
 
     run_task_parser = task_sub.add_parser("run", help="Run a long-running task")
-    run_task_parser.add_argument("model", help="Model name (e.g., gemma3:1b)")
+    run_task_parser.add_argument("model", help="Model name (e.g., gemma4:e2b)")
     run_task_parser.add_argument("goal", help="Task goal/description")
     run_task_parser.add_argument("--max-duration", help="Max duration (e.g., '5m', '2h', '1d', '1w', '1M', or seconds)")
     run_task_parser.add_argument("--max-rounds", type=int, help="Max number of rounds")
+    run_task_parser.add_argument("--min-rounds", type=int, default=3, help="Minimum rounds before allowing stop (default: 3)")
     run_task_parser.add_argument("--quality", type=float, default=0.8, help="Quality threshold (0.0-1.0)")
     run_task_parser.add_argument("--context-limit", type=int, default=128000, help="Context window limit")
     run_task_parser.add_argument("--base-url", default="http://localhost:11434", help="Ollama base URL")
@@ -669,6 +670,7 @@ def handle_task_run(args) -> int:
         goal=args.goal,
         max_duration=args.max_duration,
         max_rounds=args.max_rounds,
+        min_rounds=args.min_rounds,
         quality_threshold=args.quality,
         context_limit=args.context_limit,
         base_url=args.base_url,

@@ -471,7 +471,7 @@ class OllamaAdapter(ModelAdapter):
     ) -> tuple[str, dict[str, Any], dict[str, Any]]:
         """Run with streaming and idle timeout detection.
 
-        Uses /api/generate with streaming for maximum compatibility.
+        Tries /api/generate first, falls back to /api/chat if it fails.
         Detects when the model appears stuck (no output for idle_timeout seconds).
 
         Args:
@@ -482,6 +482,20 @@ class OllamaAdapter(ModelAdapter):
         Returns:
             Tuple of (response_text, metrics, usage)
         """
+        try:
+            return self._stream_generate(prompt, timeout, idle_timeout, **kwargs)
+        except Exception as e:
+            logger.warning(f"/api/generate failed: {e}, falling back to /api/chat")
+            return self._stream_chat(prompt, timeout, idle_timeout, **kwargs)
+
+    def _stream_generate(
+        self,
+        prompt: str,
+        timeout: int = 600,
+        idle_timeout: int = 120,
+        **kwargs,
+    ) -> tuple[str, dict[str, Any], dict[str, Any]]:
+        """Stream via /api/generate endpoint."""
         url = f"{self.base_url}/api/generate"
         payload = {
             "model": self.session.model_name,
@@ -489,7 +503,34 @@ class OllamaAdapter(ModelAdapter):
             "stream": True,
         }
         payload.update(kwargs)
+        return self._do_stream(url, payload, "response", timeout, idle_timeout)
 
+    def _stream_chat(
+        self,
+        prompt: str,
+        timeout: int = 600,
+        idle_timeout: int = 120,
+        **kwargs,
+    ) -> tuple[str, dict[str, Any], dict[str, Any]]:
+        """Stream via /api/chat endpoint."""
+        url = f"{self.base_url}/api/chat"
+        payload = {
+            "model": self.session.model_name,
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": True,
+        }
+        payload.update(kwargs)
+        return self._do_stream(url, payload, "message.content", timeout, idle_timeout)
+
+    def _do_stream(
+        self,
+        url: str,
+        payload: dict,
+        content_key: str,
+        timeout: int,
+        idle_timeout: int,
+    ) -> tuple[str, dict[str, Any], dict[str, Any]]:
+        """Common streaming logic for both generate and chat APIs."""
         start_time = time.time()
         last_activity = start_time
         full_response = ""
@@ -503,7 +544,10 @@ class OllamaAdapter(ModelAdapter):
                 if line:
                     try:
                         data = json.loads(line)
-                        chunk = data.get("response", "")
+                        if content_key == "response":
+                            chunk = data.get("response", "")
+                        else:
+                            chunk = data.get("message", {}).get("content", "")
                         if chunk:
                             full_response += chunk
                             last_activity = time.time()

@@ -187,15 +187,27 @@ PROGRESS SO FAR:
 CURRENT ROUND: {round_number}
 PREVIOUS OUTPUT: {previous_output}
 
-IMPORTANT: When writing code, ALWAYS use markdown code blocks with the file path as the language tag.
-Format: ```path/to/file.ext
-<code here>
+CRITICAL RULES FOR CODE OUTPUT:
+1. ALWAYS write the COMPLETE, FULLY RUNNABLE code in every response. Never output partial snippets.
+2. ALWAYS use markdown code blocks with the EXACT file path as the fence tag.
+   Format: ```path/to/file.py
+   <COMPLETE code here>
+   ```
+3. If creating a project with multiple files, write EACH file in its own code block with its path.
+4. Each round should contain the FULL consolidated code, not just the new changes.
+5. For a single-file project, always output the entire working code.
+
+Examples of CORRECT format:
+```tank_game/main.py
+import pygame
+# ... complete runnable code here ...
+if __name__ == "__main__":
+    main()
 ```
 
-Example:
-```python
-import pygame
-# player tank code
+```tank_game/README.md
+# Tank Game
+...
 ```
 
 For shell commands, use:
@@ -204,11 +216,21 @@ mkdir -p tank_game
 pip install pygame
 ```
 
-Continue working towards the goal. If the goal is complete, output exactly:
-[COMPLETE]
-followed by a brief summary of what was accomplished.
+IMPORTANT: Do NOT output [COMPLETE] until the goal is FULLY achieved. A partially working prototype is NOT complete. 
+The task is only complete when ALL of the following are satisfied:
+- The code is FULLY FUNCTIONAL and can be run directly
+- ALL core features described in the goal are implemented
+- The code has been tested mentally and you are confident it works
+- Every file needed is written out in full
 
-Otherwise, continue with the next step of the work."""
+If the work is NOT yet complete, continue implementing the next feature or fixing issues.
+Do NOT say [COMPLETE] for partial or skeletal implementations.
+
+Only when everything is truly done, output:
+[COMPLETE]
+followed by a brief summary.
+
+Otherwise, continue with the next step, writing complete code files."""
 
     QUALITY_EVALUATION_PROMPT = """Evaluate the following output against the original goal.
 
@@ -238,12 +260,14 @@ Respond with ONLY a number between 0.0 and 1.0, nothing else."""
         progress_callback: Optional[Callable[[TaskProgress], None]] = None,
         max_retries: int = 3,
         work_dir: Optional[str | Path] = None,
+        min_rounds: int = 3,
         **model_kwargs,
     ):
         self.model_name = model_name
         self.goal = goal
         self.base_url = base_url
         self.max_duration = parse_duration(max_duration)
+        self.min_rounds = min_rounds
         self.max_rounds = max_rounds
         self.quality_threshold = quality_threshold
         self.max_retries = max_retries
@@ -339,17 +363,25 @@ Respond with ONLY a number between 0.0 and 1.0, nothing else."""
         Returns list of written file paths.
         """
         written_files = []
-        pattern = re.compile(r"```(\S*?)\s*\n(.*?)```", re.DOTALL)
+        # More robust pattern: handle various fence formats
+        pattern = re.compile(r"```(\S*)\s*\n(.*?)```", re.DOTALL)
 
         for match in pattern.finditer(text):
-            lang_or_path = match.group(1).strip().lower()
+            lang_or_path = match.group(1).strip()
             code = match.group(2).strip()
 
             if not code:
                 continue
 
-            if lang_or_path in ("bash", "sh", "shell", "zsh"):
+            # Normalize for comparison
+            lang_lower = lang_or_path.lower()
+
+            if lang_lower in ("bash", "sh", "shell", "zsh", "cmd", "powershell"):
                 logger.info(f"Shell command detected (not executing): {code[:100]}...")
+                continue
+
+            # Skip non-code blocks
+            if lang_lower in ("text", "plaintext", "output", "log", "diff", "json"):
                 continue
 
             file_path = self._resolve_file_path(lang_or_path, code)
@@ -365,6 +397,7 @@ Respond with ONLY a number between 0.0 and 1.0, nothing else."""
 
     def _resolve_file_path(self, lang_or_path: str, code: str) -> Optional[Path]:
         """Resolve a file path from language tag or code content."""
+        # Check if it looks like a file path
         if "/" in lang_or_path or "\\" in lang_or_path or "." in lang_or_path:
             return self.work_dir / lang_or_path
 
@@ -382,12 +415,15 @@ Respond with ONLY a number between 0.0 and 1.0, nothing else."""
             "toml": ".toml", "ini": ".ini", "cfg": ".cfg",
             "txt": ".txt", "text": ".txt",
         }
-        ext = ext_map.get(lang_or_path, "")
+        ext = ext_map.get(lang_or_path.lower(), "")
         if not ext:
+            logger.warning(f"Unknown language tag '{lang_or_path}', skipping code block")
             return None
 
-        if ext == ".py" and self._is_main_script(code):
-            return self.work_dir / "main.py"
+        # For Python, try to infer a good filename
+        if ext == ".py":
+            if self._is_main_script(code):
+                return self.work_dir / "main.py"
 
         name = self._infer_name_from_code(code, ext)
         return self.work_dir / f"{name}{ext}"
@@ -623,6 +659,113 @@ Respond with ONLY a number between 0.0 and 1.0, nothing else."""
             except Exception as e:
                 logger.warning(f"Progress callback failed: {e}")
 
+    def _final_consolidation(self) -> list[str]:
+        """Ask the model to output all complete files for the project.
+
+        This ensures that even if the model output incremental code during
+        the task, we get the final consolidated versions of all files.
+        """
+        consolidation_prompt = f"""The original task was: {self.goal}
+
+You previously worked on this task. Now output ALL the final, complete files needed for the project to be fully runnable.
+
+For EACH file, use this exact format:
+```path/to/file.py
+<COMPLETE final code here>
+```
+
+Include every file that needs to exist for the project to work. Do not skip any files.
+Do not include explanations, just the code blocks with file paths."""
+
+        written_files = []
+        timeout = self.model_kwargs.get("timeout", 600)
+        idle_timeout = self.model_kwargs.get("idle_timeout", max(120, timeout // 5))
+
+        # Try chat API first (better for instruction-following models)
+        for api_method in ("chat", "generate"):
+            try:
+                logger.info(f"Running final consolidation via /api/{api_method}...")
+
+                if api_method == "chat":
+                    url = f"{self.base_url}/api/chat"
+                    payload = {
+                        "model": self.model_name,
+                        "messages": [{"role": "user", "content": consolidation_prompt}],
+                        "stream": True,
+                    }
+                else:
+                    url = f"{self.base_url}/api/generate"
+                    payload = {
+                        "model": self.model_name,
+                        "prompt": consolidation_prompt,
+                        "stream": True,
+                    }
+
+                import requests as req
+                start_time = time.time()
+                last_activity = start_time
+                response_text = ""
+                metrics = {}
+
+                resp = req.post(url, json=payload, stream=True, timeout=timeout)
+                resp.raise_for_status()
+
+                for line in resp.iter_lines():
+                    if line:
+                        try:
+                            data = json.loads(line)
+                            if api_method == "chat":
+                                chunk = data.get("message", {}).get("content", "")
+                            else:
+                                chunk = data.get("response", "")
+                            if chunk:
+                                response_text += chunk
+                                last_activity = time.time()
+                            if data.get("done", False):
+                                metrics = {
+                                    "eval_count": data.get("eval_count", 0),
+                                    "eval_duration": data.get("eval_duration", 0),
+                                    "total_duration": data.get("total_duration", 0),
+                                }
+                                break
+                        except json.JSONDecodeError:
+                            continue
+
+                    if time.time() - last_activity > idle_timeout and response_text:
+                        logger.warning(f"Consolidation idle timeout after {len(response_text)} chars")
+                        break
+                    if time.time() - start_time > timeout:
+                        logger.warning(f"Consolidation total timeout after {timeout}s")
+                        break
+
+                if not response_text:
+                    logger.warning(f"/api/{api_method} returned empty response, trying next method...")
+                    continue
+
+                written_files = self._extract_and_write_files(response_text)
+
+                tokens = metrics.get("eval_count", 0)
+                self.total_tokens_used += tokens
+                self._last_output = response_text
+
+                self.session.add_message("user", consolidation_prompt)
+                self.session.add_message("assistant", response_text, metrics=metrics)
+                self.manager._save_session(self.session)
+
+                if written_files:
+                    logger.info(f"Final consolidation via /api/{api_method} wrote {len(written_files)} file(s): {', '.join(written_files)}")
+                    return written_files
+                else:
+                    logger.warning(f"/api/{api_method} consolidation produced no files, trying next method...")
+                    continue
+
+            except Exception as e:
+                logger.warning(f"Final consolidation via /api/{api_method} failed: {e}")
+                continue
+
+        logger.error("All consolidation attempts failed. Files may be incomplete.")
+        return written_files
+
     def execute(self) -> TaskResult:
         """Execute the long-running task.
 
@@ -723,12 +866,22 @@ Respond with ONLY a number between 0.0 and 1.0, nothing else."""
                 self._emit_progress()
 
                 if "[COMPLETE]" in response or quality >= self.quality_threshold:
-                    if quality >= self.quality_threshold:
+                    if self.rounds_completed < self.min_rounds:
+                        logger.warning(
+                            f"Round {self.rounds_completed}/{self.min_rounds} minimum: "
+                            f"quality={quality:.2f}, but continuing to meet min_rounds requirement."
+                        )
+                    elif quality >= self.quality_threshold:
                         stop_reason = f"Quality threshold reached ({quality:.2f} >= {self.quality_threshold})"
+                        logger.info(f"Stopping: {stop_reason}")
+                        break
                     else:
-                        stop_reason = "Task marked complete by model"
-                    logger.info(f"Stopping: {stop_reason}")
-                    break
+                        # Model said [COMPLETE] but quality is below threshold
+                        # Continue iterating to improve the output
+                        logger.warning(
+                            f"Model marked [COMPLETE] but quality {quality:.2f} < {self.quality_threshold}. "
+                            f"Continuing to improve."
+                        )
 
         except KeyboardInterrupt:
             stop_reason = "Interrupted by user"
@@ -736,6 +889,15 @@ Respond with ONLY a number between 0.0 and 1.0, nothing else."""
 
         finally:
             self._running = False
+
+        # Final consolidation: ensure all project files are written
+        if not self._files_written:
+            logger.info("No files written during task, attempting final consolidation...")
+            self._final_consolidation()
+        else:
+            # Even if files were written, do a final consolidation to get complete versions
+            logger.info("Running final consolidation to ensure complete project files...")
+            self._final_consolidation()
 
         final_output = "\n\n".join(full_output_parts)
 
